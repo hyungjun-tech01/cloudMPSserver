@@ -1,35 +1,42 @@
 const express = require('express');
+// jwt 모듈 추가
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt'); // bcrypt 모듈 추가
+
 const router = express.Router();
 
+// PostgreSQL 연결을 위한 Pool 객체 정의 (예시)
+const { Pool } = require('pg');
+
+const localcheck = require('../../middleware/localcheck');
+
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+});
+
 // login : host:port번호/api/users/login 
-router.post('/login', async(req, res) => {
-  const {user_name, password} = req.body;
+router.post('/login',localcheck, async(req, res) => {
+  const {user_name, password, ip_address} = req.body;
+
   try{
-      
+
       const users = await pool.query('SELECT user_name, password FROM tbl_user_info WHERE user_name = $1', [user_name]);
       if(!users.rows.length) 
          throw new Error('Invalid userName or password');
 
-      // alogrithm 
-      const algorithm = process.env.CRYPTO_ALGORITHM;
-      // key 
-      let key = Buffer.alloc(32);
-      Buffer.from(process.env.CRYPTO_PASSWORD).copy(key);
+       // bcrypt.compare를 사용하여 비밀번호를 비교합니다.
+       const hashedPassword = users.rows[0].password;
+       const passwordMatch = await bcrypt.compare(password, hashedPassword);
 
-      // 초기화 벡터를 직접 정의 (16바이트 길이의 버퍼)
-      let iv = Buffer.alloc(16);
-      Buffer.from(process.env.CRYPTO_IV).copy(iv);
-      
-      const cipher = crypto.createCipheriv(algorithm, key, iv); 
 
-      let passwordComapre = cipher.update(password, 'utf8', 'base64');
-
-      passwordComapre += cipher.final('base64');
-
-      if(passwordComapre === users.rows[0].password) {
-          const token = jwt.sign({user_name}, process.env.JWT_SECRET, {expiresIn:'1hr'});
-          res.json({ResultCode : '0', ErrorMessage:'', token:token});
-      }else{
+      if (passwordMatch) {
+        const token = jwt.sign({ user_name }, process.env.JWT_SECRET, { expiresIn: '1hr' });
+        res.json({ ResultCode: '0', ErrorMessage: '', token: token });
+      } else {
         throw new Error('Invalid userName or password');
       }
 

@@ -11,7 +11,8 @@
 ```json
 {
   "user_name": "string",
-  "password": "string"
+  "password": "string",
+  "ip_address": "string"
 }
 ```
 
@@ -34,8 +35,17 @@
 ```
 
 ## Process Flow
-1. 사용자 `user_name` 으로 DB(`tbl_user_info`) 조회
-2. 사용자 존재하지 않으면 `Invalid userName or password` 에러 반환
+1. 사용자 존재하지 않으면 `Invalid userName or password` 에러 반환
+2. 비밀번호 불일치하면 `Invalid userName or password` 에러 반환
 3. 일치하면 `JWT Token` 생성 후 반환
-4. 불일치하면 에러 메시지 반환
 
+## Example (curl)
+```bash
+curl -X POST http://localhost:38005/api/users/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_name": "testuser",
+    "password": "mypassword",
+    "ip_address": "10.15.56.135"
+  }'
+```
