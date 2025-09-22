@@ -152,3 +152,14 @@ POST /api/users/getuserinfo
 - `session_token`은 **로그인 API**를 통해 발급됩니다.  
 - 모든 보안 요청 시 반드시 `session_token`을 포함해야 합니다.  
 - `session_token`이 만료된 경우, 새로 로그인하여 재발급 받아야 합니다.  
+
+## Example (curl)
+```bash
+curl -X POST http://localhost:38005/api/users/getuserinfo \
+  -H "Content-Type: application/json" \
+  -H "session_token: <your_session_token>" \
+  -d '{
+    "user_name": "admin",
+    "ip_address": "127.0.0.1"
+  }'
+```
