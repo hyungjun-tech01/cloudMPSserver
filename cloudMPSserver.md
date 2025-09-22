@@ -115,7 +115,10 @@ POST /api/users/getuserinfo
     "created_date": "2025-09-21T12:00:00.000Z",
     "created_by": "system",
     "user_source_type": "LOCAL",
-    "modified": "2025-09-22T09:00:00.000Z"
+    "modified": "2025-09-22T09:00:00.000Z",
+    "dept_name": "Biz플랫폼부",
+    "full_dept_name": "마이레이션 > 은행사업본부 > Biz플랫폼부",
+    "security_group_name": "경영그룹"    
   }
 }
 ```
