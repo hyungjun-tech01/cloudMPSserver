@@ -1,3 +1,16 @@
+# API 문서
+
+## 수정 이력
+| 수정일       | 작성자     | 내용 |
+|--------------|-----------|------|
+| 2025-09-22   | zagan kim | 최초 작성 및 로그인 / Get User Info API 문서 작성 |
+| 2025-09-22   | zagan kim | Get User Info API 응답에 dept_name, full_dept_name, security_group_name 추가 |
+
+
+## 목차
+1. [로그인 API](#1-로그인-api)
+2. [Get User Info API](#2-get-user-info-api)
+
 # 1. 로그인 API
 
 ## Endpoint
