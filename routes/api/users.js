@@ -9,6 +9,7 @@ const router = express.Router();
 const { Pool } = require('pg');
 
 const localcheck = require('../../middleware/localcheck');
+const authMiddleware = require('../../middleware/authMiddleware');
 
 const pool = new Pool({
   user: process.env.DB_USER,
@@ -24,6 +25,8 @@ router.post('/login',localcheck, async(req, res) => {
 
   try{
 
+      // login 시도했던 로그 생성 .
+
       const users = await pool.query('SELECT user_name, password FROM tbl_user_info WHERE user_name = $1', [user_name]);
       if(!users.rows.length) 
          throw new Error('Invalid userName or password');
@@ -34,7 +37,7 @@ router.post('/login',localcheck, async(req, res) => {
 
 
       if (passwordMatch) {
-        const token = jwt.sign({ user_name }, process.env.JWT_SECRET, { expiresIn: '1hr' });
+        const token = jwt.sign({ user_name }, process.env.JWT_SECRET, { expiresIn: '8hr' });
         res.json({ ResultCode: '0', ErrorMessage: '', token: token });
       } else {
         throw new Error('Invalid userName or password');
@@ -49,6 +52,38 @@ router.post('/login',localcheck, async(req, res) => {
       res.end();
   }
 });
+
+// 사용자 정보 조회
+router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
+
+  const {user_name, ip_address} = req.body;
+
+  try{
+    const users = await pool.query(`SELECT *
+      FROM tbl_user_info WHERE user_name = $1`, [user_name]);
+
+
+    let user = users.rows[0];
+
+    // password 속성 제거
+    if (user) {
+      const { password, ...userWithoutPassword } = user;
+      user = userWithoutPassword;
+    }
+
+    res.json({ ResultCode: '0', ErrorMessage: '', user: user });
+    res.end();
+
+  }catch(err){
+      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/getuserinfo'] reqBody Error:`, user_name );
+      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/getuserinfo '] Error:`, err.message); 
+
+      res.status(401).json({ ResultCode: '1', ErrorMessage: err.message });
+      res.end();
+  }
+
+});
+
 
 
 // 사용자 전체 목록 조회
