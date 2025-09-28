@@ -116,6 +116,41 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
       }
   }
 
+  // 회원가입 요청 , signup_request
+  router.post('/signup_request',localcheck, async(req, res) => {
+    //회원타입, 회사명, 사업자번호, 대표자명, 국가, 언어, 시간대, 통화 , 이용약관동의, 개인정보수집동의, 위치정보동의, 메일동의, 이름, e_mail_address, 패스워드 
+
+    const {user_name, password, ip_address} = req.body;
+  
+    try{
+  
+        // login 시도했던 로그 생성 .
+  
+        const users = await pool.query('SELECT user_name, password FROM tbl_user_info WHERE user_name = $1', [user_name]);
+        if(!users.rows.length) 
+           throw new Error('Invalid userName or password');
+  
+         // bcrypt.compare를 사용하여 비밀번호를 비교합니다.
+         const hashedPassword = users.rows[0].password;
+         const passwordMatch = await bcrypt.compare(password, hashedPassword);
+  
+  
+        if (passwordMatch) {
+          const token = jwt.sign({ user_name }, process.env.JWT_SECRET, { expiresIn: '8hr' });
+          res.json({ ResultCode: '0', ErrorMessage: '', token: token });
+        } else {
+          throw new Error('Invalid userName or password');
+        }
+  
+        res.end();
+    }catch(err){
+        console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/login'] reqBody Error:`, user_name );
+        console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/login '] Error:`, err.message); 
+  
+        res.status(401).json({ ResultCode: '1', ErrorMessage: err.message });
+        res.end();
+    }
+  });
 
     // password 속성 제거
     if (user) {
