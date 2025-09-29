@@ -10,7 +10,6 @@ const usersRouter = require('./routes/api/users');
 // Express가 JSON 형식의 요청 본문을 파싱하도록 설정합니다.
 app.use(express.json());
 
-
 // 특정 경로로 라우터 연결
 app.use('/api/users', usersRouter);       // /users 로 시작하는 요청은 usersRouter가 처리
 

@@ -88,7 +88,7 @@ BEGIN
         select generate_6_verification_code() into v_verifiction_code ;
 
         -- 인증코드 생성 
-        insert into tbl_auth_info(reference_id,auth_type, varification_code, expired_date, created_date )
+        insert into tbl_auth_info(reference_id,auth_type, verification_code, expired_date, created_date )
         values(v_user_id, 'USER_SIGN_IN',v_verifiction_code,  now() + interval '3 hours', now() );     
 
         -- 회사입력 
@@ -118,7 +118,7 @@ BEGIN
         select generate_6_verification_code() into v_verifiction_code ;
 
         -- 인증코드 생성 
-        insert into tbl_auth_info(reference_id,auth_type, varification_code, expired_date, created_date )
+        insert into tbl_auth_info(reference_id,auth_type, verification_code, expired_date, created_date )
         values(v_user_id, 'USER_SIGN_IN',v_verifiction_code, now() + interval '3 hours', now() );   
 
     elsif( i_user_type = 'PERSON' ) then
@@ -138,7 +138,7 @@ BEGIN
         select generate_6_verification_code() into v_verifiction_code ;
 
         -- 인증코드 생성 
-        insert into tbl_auth_info(reference_id,auth_type, varification_code, expired_date, created_date )
+        insert into tbl_auth_info(reference_id,auth_type, verification_code, expired_date, created_date )
         values(v_user_id, 'USER_SIGN_IN',v_verifiction_code, now() + interval '3 hours', now() );           
     end if;
 

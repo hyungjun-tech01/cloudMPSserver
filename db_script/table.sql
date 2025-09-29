@@ -13,6 +13,8 @@ update tbl_user_info
 set user_type = 'PERSON', user_status = 'COMPLETE_AUTH';
 
 
+drop table tbl_auth_info;
+
 -- 인증코드 저장 테이블 
 CREATE TABLE tbl_auth_info (
     -- 기본 키: 인증 정보의 고유 ID (랜덤 UUID v4로 자동 생성)
@@ -21,7 +23,7 @@ CREATE TABLE tbl_auth_info (
     -- 인증 유형: 'USER_SIGN_IN, PASSWORD',
     auth_type VARCHAR(20) NOT NULL,
     -- 인증 정보 (보안을 위해 해시된 비밀번호 또는 토큰 참조 등), 6자리
-    varification_code varchar(20),
+    verification_code varchar(20),
 
     expired_date timestamp,
     created_date timestamp
