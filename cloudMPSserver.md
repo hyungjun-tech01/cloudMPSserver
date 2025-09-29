@@ -5,6 +5,7 @@
 |--------------|-----------|------|
 | 2025-09-22   | zagan kim | 최초 작성 및 로그인 / Get User Info API 문서 작성 |
 | 2025-09-22   | zagan kim | Get User Info API 응답에 dept_name, full_dept_name, security_group_name 추가 |
+| 2025-09-29   | zagan kim | 회원가입 요청 API, 로그인 (Verification Code 인증) API 추가 |
 
 
 ## 목차
