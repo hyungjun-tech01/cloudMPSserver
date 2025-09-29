@@ -13,7 +13,7 @@ update tbl_user_info
 set user_type = 'PERSON', user_status = 'COMPLETE_AUTH';
 
 
-drop table tbl_auth_info;
+drop table if exists tbl_auth_info;
 
 -- 인증코드 저장 테이블 
 CREATE TABLE tbl_auth_info (
@@ -30,7 +30,8 @@ CREATE TABLE tbl_auth_info (
 );
 
 --2025.09.28 
-drop table tbl_company_info;
+drop table if exists tbl_company_info;
+
 -- 회사테이블 
 create table tbl_company_info(
 company_code                      integer	   primary key   ,
@@ -70,9 +71,9 @@ language                          varchar(30)   ,
 time_zone                         varchar(30)   ,
 currency_code                     varchar(30)   ,
 country							  varchar(30)   
-)
+);
 
-drop sequence company_code_seq;
+drop sequence if exists company_code_seq;
 
 -- 회사테이블 PK : 6자리 회사코드  (숫자) , SEQ로 작업 
 CREATE SEQUENCE company_code_seq
