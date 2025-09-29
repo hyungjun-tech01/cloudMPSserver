@@ -11,6 +11,8 @@
 ## 목차
 1. [로그인 API](#1-로그인-api)
 2. [Get User Info API](#2-get-user-info-api)
+3. [회원가입 요청 API](#3-회원가입-요청-api)
+4. [로그인 (Verification Code 인증) API](#4-로그인-verification-code-인증-api)
 
 # 1. 로그인 API
 
