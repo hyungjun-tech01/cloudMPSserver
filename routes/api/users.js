@@ -32,7 +32,7 @@ const pool = new Pool({
 
 // login : host:port번호/api/users/login 
 router.post('/login',localcheck, async(req, res) => {
-  const {user_type, user_name, password, company_code, ip_address} = req.body;
+  const {user_name, password, company_code, ip_address} = req.body;
 
   try{
 
