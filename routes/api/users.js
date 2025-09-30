@@ -32,33 +32,65 @@ const pool = new Pool({
 
 // login : host:port번호/api/users/login 
 router.post('/login',localcheck, async(req, res) => {
-  const {user_name, password, ip_address} = req.body;
+  const {user_name, password, company_code, ip_address} = req.body;
 
   try{
 
       // login 시도했던 로그 생성 .
 
-      const users = await pool.query(`SELECT user_name, password FROM tbl_user_info WHERE user_name = $1 and user_status='COMPLETE_AUTH'`, [user_name]);
-      if(!users.rows.length) 
-         throw new Error('Invalid userName or password');
+      if(company_code){
+        const company_exitst = await pool.query(`SELECT company_name
+            FROM tbl_company_info 
+            WHERE company_code = $1` , [company_code]);
 
-       // bcrypt.compare를 사용하여 비밀번호를 비교합니다.
-       const hashedPassword = users.rows[0].password;
-       const passwordMatch = await bcrypt.compare(password, hashedPassword);
+        if(!company_exitst.rows.length){
+          throw new Error('Invalid Company Code');
+        }
 
+        const users = await pool.query(`SELECT user_name, password 
+                                         FROM tbl_user_info 
+                                         WHERE user_name = $1 
+                                         and company_code = $2 
+                                         and user_status='COMPLETE_AUTH'`, [user_name,  company_code]);
+        if(!users.rows.length) 
+          throw new Error('Invalid userName or password');
 
-      if (passwordMatch) {
-        const token = jwt.sign({ user_name }, process.env.JWT_SECRET, { expiresIn: '8hr' });
-        res.json({ ResultCode: '0', ErrorMessage: '', token: token });
-      } else {
-        throw new Error('Invalid userName or password');
+        // bcrypt.compare를 사용하여 비밀번호를 비교합니다.
+        const hashedPassword = users.rows[0].password;
+        const passwordMatch = await bcrypt.compare(password, hashedPassword);
+
+        if (passwordMatch) {
+          const token = jwt.sign({ user_name }, process.env.JWT_SECRET, { expiresIn: '8hr' });
+          res.json({ ResultCode: '0', ErrorMessage: '', token: token });
+        } else {
+          throw new Error('Invalid userName or password');
+        }
+
+        res.end();                  
+      }else{
+        const users = await pool.query(`SELECT user_name, password FROM tbl_user_info WHERE user_name = $1 and user_status='COMPLETE_AUTH'`, [user_name]);
+        if(!users.rows.length) 
+           throw new Error('Invalid userName or password');
+  
+         // bcrypt.compare를 사용하여 비밀번호를 비교합니다.
+         const hashedPassword = users.rows[0].password;
+         const passwordMatch = await bcrypt.compare(password, hashedPassword);
+  
+        if (passwordMatch) {
+          const token = jwt.sign({ user_name }, process.env.JWT_SECRET, { expiresIn: '8hr' });
+          res.json({ ResultCode: '0', ErrorMessage: '', token: token });
+        } else {
+          throw new Error('Invalid userName or password');
+        }
+  
+        res.end();
       }
 
-      res.end();
+      
   }catch(err){
       console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/login'] reqBody Error:`, user_name );
       console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/login '] Error:`, err.message); 
-
+      
       res.status(401).json({ ResultCode: '1', ErrorMessage: err.message });
       res.end();
   }

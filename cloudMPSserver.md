@@ -28,6 +28,7 @@
 {
   "user_name": "string",
   "password": "string",
+  "company_code": "string", (optional)
   "ip_address": "string"
 }
 ```
@@ -42,7 +43,14 @@
 }
 ```
 
-### Failure (401 Unauthorized)
+### Failure (401 Unauthorized) 
+```json
+{
+  "ResultCode": "1",
+  "ErrorMessage": "Invalid userName or password"
+}
+```
+### Failure (401 Unauthorized)  
 ```json
 {
   "ResultCode": "1",
@@ -50,10 +58,13 @@
 }
 ```
 
+
 ## Process Flow
 1. 사용자 존재하지 않으면 `Invalid userName or password` 에러 반환
 2. 비밀번호 불일치하면 `Invalid userName or password` 에러 반환
-3. 일치하면 `JWT Token` 생성 후 반환
+3. 회사코드와 사용자가 맞지 않을 경우 경우도 `Invalid userName or password` 에러 반환
+4. 회사코드가 없는 경우 `Invalid Company Code` 에러 반환
+5. 일치하면 `JWT Token` 생성 후 반환
 
 ## Example (curl)
 ```bash
@@ -62,6 +73,7 @@ curl -X POST http://localhost:38005/api/users/login \
   -d '{
     "user_name": "testuser",
     "password": "mypassword",
+    "comapny_code": "100002",  (Optional)
     "ip_address": "10.15.56.135"
   }'
 ```
