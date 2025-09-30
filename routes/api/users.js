@@ -32,7 +32,7 @@ const pool = new Pool({
 
 // login : host:port번호/api/users/login 
 router.post('/login',localcheck, async(req, res) => {
-  const {user_name, password, company_code, ip_address} = req.body;
+  const {user_type, user_name, password, company_code, ip_address} = req.body;
 
   try{
 
@@ -51,9 +51,10 @@ router.post('/login',localcheck, async(req, res) => {
                                          FROM tbl_user_info 
                                          WHERE user_name = $1 
                                          and company_code = $2 
-                                         and user_status='COMPLETE_AUTH'`, [user_name,  company_code]);
+                                         and user_status='COMPLETE_AUTH'
+                                         and user_type = 'COMPANY'`, [user_name,  company_code]);
         if(!users.rows.length) 
-          throw new Error('Invalid userName or password');
+          throw new Error('Company - Invalid userName or password');
 
         // bcrypt.compare를 사용하여 비밀번호를 비교합니다.
         const hashedPassword = users.rows[0].password;
@@ -63,12 +64,13 @@ router.post('/login',localcheck, async(req, res) => {
           const token = jwt.sign({ user_name }, process.env.JWT_SECRET, { expiresIn: '8hr' });
           res.json({ ResultCode: '0', ErrorMessage: '', token: token });
         } else {
-          throw new Error('Invalid userName or password');
+          throw new Error('Company - Invalid userName or password');
         }
 
         res.end();                  
       }else{
-        const users = await pool.query(`SELECT user_name, password FROM tbl_user_info WHERE user_name = $1 and user_status='COMPLETE_AUTH'`, [user_name]);
+        const users = await pool.query(`SELECT user_name, password FROM tbl_user_info 
+                                         WHERE user_name = $1 and user_status='COMPLETE_AUTH' and user_type = 'PERSON'`, [user_name]);
         if(!users.rows.length) 
            throw new Error('Invalid userName or password');
   
