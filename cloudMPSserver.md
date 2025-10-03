@@ -8,12 +8,14 @@
 | 2025-09-29   | zagan kim | 회원가입 요청 API, 로그인 (Verification Code 인증) API 추가 |
 | 2025-09-30   | zagan kim | 로그인 API 에 회사코드 추가 |
 | 2025-10-03   | zagan kim | 로그인 API return 에 user_role 추가, 회언가입 요청 API애 company_type 추가 |
+| 2025-10-03   | zagan kim | 로그인 API return 에 user_role 추가, 회언가입 요청 API애 company_type 추가 |
 
 ## 목차
 1. [로그인 API](#1-로그인-api)
 2. [Get User Info API](#2-get-user-info-api)
 3. [회원가입 요청 API](#3-회원가입-요청-api)
 4. [로그인 (Verification Code 인증) API](#4-로그인-verification-code-인증-api)
+5. [사용자 목록 조회 API](#5-사용자-목록-조회-api)
 
 # 1. 로그인 API
 

@@ -100,4 +100,5 @@ CREATE SEQUENCE company_code_seq
  -- tbl_company_info 테이블 컬럼 추가
  alter table tbl_company_info add column company_type varchar(30);
  -- stored_procedure 변경 
- -- signup_request ,    
+ 
+ 
