@@ -7,7 +7,7 @@
 | 2025-09-22   | zagan kim | Get User Info API 응답에 dept_name, full_dept_name, security_group_name 추가 |
 | 2025-09-29   | zagan kim | 회원가입 요청 API, 로그인 (Verification Code 인증) API 추가 |
 | 2025-09-30   | zagan kim | 로그인 API 에 회사코드 추가 |
-
+| 2025-10-03   | zagan kim | 로그인 API return 에 user_role 추가, 회언가입 요청 API애 company_type 추가 |
 
 ## 목차
 1. [로그인 API](#1-로그인-api)
@@ -105,7 +105,7 @@ POST /api/users/getuserinfo
 ### Body (JSON)
 ```json
 {
-  "user_name": "admin",
+  "user_name": "whmoon@naver.com",
   "ip_address": "127.0.0.1"
 }
 ```
@@ -127,10 +127,10 @@ POST /api/users/getuserinfo
   "ErrorMessage": "",
   "user": {
     "user_id": 1,
-    "user_name": "admin",
+    "user_name": "whmoon@naver.com",
     "external_user_name": "관리자",
-    "full_name": "Admin User",
-    "email": "admin@example.com",
+    "full_name": "김형준",
+    "email": "whmoon@naver.com",
     "notes": "System administrator",
     "total_jobs": 100,
     "total_pages": 2000,
@@ -145,6 +145,7 @@ POST /api/users/getuserinfo
     "created_by": "system",
     "user_source_type": "LOCAL",
     "modified": "2025-09-22T09:00:00.000Z",
+    "user_role": "PARTNER",
     "dept_name": "Biz플랫폼부",
     "full_dept_name": "마이레이션 > 은행사업본부 > Biz플랫폼부",
     "security_group_name": "경영그룹"    
@@ -191,7 +192,7 @@ curl -X POST http://localhost:38005/api/users/getuserinfo \
   -H "Content-Type: application/json" \
   -H "session_token: <your_session_token>" \
   -d '{
-    "user_name": "admin",
+    "user_name": "whmoon@naver.com",
     "ip_address": "127.0.0.1"
   }'
 ```
@@ -212,6 +213,7 @@ curl -X POST http://localhost:38005/api/users/getuserinfo \
 | 이름                      | 타입      | 필수 | 설명 |
 |---------------------------|----------|------|------|
 | `user_type`               | string   | ✅   | 회원 타입 (예: PERSON, COMPANY 등) |
+| `company_type`            | string   | ✅   | 회사타입 PARTNER, GENERAL |
 | `company_name`            | string   | ✅   | 회사명 |
 | `business_registration_code` | string | ✅   | 사업자등록번호 |
 | `company_code`            | string   | ❌   | 회사 코드 (없으면 DB에서 생성) |
@@ -238,6 +240,7 @@ curl -X POST http://localhost:38005/api/users/getuserinfo \
 {
   "user_type": "company",
   "company_name": "테스트 주식회사",
+  "company_type": "PARTNER",
   "business_registration_code": "123-45-67890",
   "company_code": null,
   "deal_company_code": null,
@@ -268,7 +271,7 @@ curl -X POST http://localhost:38005/api/users/getuserinfo \
   "ResultCode": "0",
   "ErrorMessage": "",
   "verification_code": "123456",
-  "company_code": "CMP00123"
+  "company_code": "100014"
 }
 ```
 
@@ -286,9 +289,10 @@ curl -X POST http://localhost:38005/api/users/getuserinfo \
 ```json
 {
   "ResultCode": "1",
-  "ErrorMessage": "이미 존재하는 이메일입니다."
+  "ErrorMessage": "에러 발생: 중복된 키 값이 \"tbl_user_info_pkey\" 고유 제약 조건을 위반함)"
 }
 ```
+tbl_user_info_pkey 는 email 입니다.
 
 또는 서버 에러 발생 시:
 ```json
@@ -338,7 +342,7 @@ curl -X POST http://localhost:38005/api/users/getuserinfo \
 {
   "user_name": "hong@test.com",
   "password": "mypassword",
-  "verification_code": "123456",
+  "verification_code": "V8taut",
   "company_code": "100007",
   "ip_address": "127.0.0.1"
 }

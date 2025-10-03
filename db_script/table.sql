@@ -90,3 +90,14 @@ CREATE SEQUENCE company_code_seq
 
  -- check 
  SELECT nextval('company_code_seq');   
+
+
+
+ -- 2025.10.01 
+ -- tbl_user_info 테이블 컬럼 추가 
+ alter table tbl_user_info add column user_role   varchar(50); 
+
+ -- tbl_company_info 테이블 컬럼 추가
+ alter table tbl_company_info add column company_type varchar(30);
+ -- stored_procedure 변경 
+ -- signup_request ,    

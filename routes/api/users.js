@@ -123,7 +123,7 @@ router.post('/login_vericode',localcheck, async(req, res) => {
                                                 FROM tbl_user_info t1, tbl_auth_info t2
                                                 WHERE t1.user_name = $1 
                                                 and t1.user_id = t2.reference_id
-                                                and t2.auth_type = 'USER_SIGN_IN'
+                                                and t2.auth_type = 'USER_SIGN_UP'
                                                 and t2.verification_code = $2
                                                 and t2.expired_date > now() 
                                                 and user_status in ('NEED_AUTH','PASSWORD_CHANGING' )`, [user_name, verification_code]);
@@ -247,6 +247,7 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
 
   console.log('signup_request');
   const {user_type, 
+    company_type,
     company_name, 
     business_registration_code,
     company_code              ,
@@ -273,8 +274,9 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
 
     const signUp = await pool.query(`call signup_request($1, $2, $3, $4, 
       $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 
-      $19, $20, $21)` ,
+      $19, $20, $21, $22)` ,
     [user_type , 
+      company_type,
       company_name , 
       business_registration_code , 
       company_code , 

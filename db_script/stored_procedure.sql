@@ -31,6 +31,7 @@ select generate_6_verification_code();
 --  회원타입, 회사명, 사업자번호, 대표자명, 국가, 언어, 시간대, 통화 , 이용약관동의, 개인정보수집동의, 위치정보동의, 메일동의, 이름, e_mail_address, 패스워드 
 CREATE OR REPLACE Procedure signup_request(
     i_user_type                         in text,   -- PERSON|COMPANY  
+    i_company_type                      in text, -- PARTNER | GENERAL
     i_company_name                      in text,
     i_business_registration_code        in text, -- 사업자번호 
     i_company_code                      in text, -- 기업회원인데 컴퍼니가 있는 경우에는 컴퍼니 코드가 들어 온다., 
@@ -45,7 +46,7 @@ CREATE OR REPLACE Procedure signup_request(
     i_location_information              in text,
     i_notification_email                in text,
     i_full_name                         in text,
-    i_e_mail_adress                     in text,   -- user_name 으로 설정 , 
+    i_e_mail_adress                     in text,    -- user_name 으로 설정 , 
     i_password                          in text,    -- bycript 로 해시화 된 것 
     x_verification_code                 out text,
     x_company_code                      out text,   -- 컴퍼니코드가 들어 오지 않은 기업회원의 경우 컴퍼니코드까지 함께 리턴 
@@ -57,9 +58,11 @@ DECLARE
     v_verifiction_code varchar(30);
     v_deal_company_code varchar(30);
     v_user_id varchar(36);
+    v_user_role varchar(50);
 BEGIN
     v_company_code := null;
     v_deal_company_code := i_deal_company_code;
+    v_user_role := '';
     select uuid_generate_v4() into v_user_id;
     
     -- 회사타입인 경우
@@ -72,74 +75,92 @@ BEGIN
             v_deal_company_code := '100000';
         end if;
 
+        --회사타입이 PARTNER 이면, user_role : PARTNER
+        --회사타입이 GENERAL 이면 , user_role : SUBSCRIPTION
+        if(i_company_type = 'PARTNER') then
+            v_user_role := 'PARTNER';
+        end if;
+        if( i_company_type = 'GENERAL' ) then
+            v_user_role := 'SUBSCRIPTION';
+        end if;
+
         -- 회원입력 (
         INSERT INTO tbl_user_info (
                 user_id, user_name, full_name, email, 
                 password, user_type, company_code, user_status, 
                 terms_of_service, privacy_policy, location_information, notification_email, 
-                created_date, created_by
+                created_date, created_by, user_role
             ) VALUES (
                 v_user_id, i_e_mail_adress, i_full_name, i_e_mail_adress, 
                 i_password, i_user_type, v_company_code, 'NEED_AUTH', 
                 i_terms_of_service, i_privacy_policy, i_location_information, i_notification_email, 
-                now(), v_user_id
+                now(), v_user_id, v_user_role
             );
 
         select generate_6_verification_code() into v_verifiction_code ;
 
         -- 인증코드 생성 
         insert into tbl_auth_info(reference_id,auth_type, verification_code, expired_date, created_date )
-        values(v_user_id, 'USER_SIGN_IN',v_verifiction_code,  now() + interval '3 hours', now() );     
+        values(v_user_id, 'USER_SIGN_UP',v_verifiction_code,  now() + interval '3 hours', now() );     
 
         -- 회사입력 
         insert into tbl_company_info(
             company_code, deal_company_code, company_name, business_registration_code, ceo_name,
             create_user, create_date, modify_date, recent_user,
-            language, time_zone, currency_code, country
+            language, time_zone, currency_code, country, company_type
             ) values(
                 v_company_code, v_deal_company_code::integer, i_company_name, i_business_registration_code, i_ceo_name,
                 v_user_id, now(), now(), v_user_id,
-                i_language, i_time_zone, i_currency_code, i_country
+                i_language, i_time_zone, i_currency_code, i_country, i_company_type
             );
     elsif (i_user_type = 'COMPANY' and i_company_code is not null) then 
+        --회사타입이 PARTNER 이면, user_role : PARTNER
+        --회사타입이 GENERAL 이면 , user_role : SUBSCRIPTION
+        if(i_company_type = 'PARTNER') then
+            v_user_role := 'PARTNER_USER';
+        end if;
+        if( i_company_type = 'GENERAL' ) then
+            v_user_role := 'SUBSCRIPT_USER';
+        end if;
         -- 회원입력 (
         insert into tbl_user_info (
             user_id, user_name, full_name, email,
             password, user_type, company_code, user_status,
             terms_of_service, privacy_policy, location_information, notification_email,
-            created_date, created_by
+            created_date, created_by, user_role
         ) values(
             v_user_id, i_e_mail_adress, i_full_name, i_e_mail_adress,
             i_password, i_user_type, i_company_code::integer, 'NEED_AUTH',
             i_terms_of_service, i_privacy_policy, i_location_information, i_notification_email,
-            now(), v_user_id
+            now(), v_user_id, v_user_role
         );
 
         select generate_6_verification_code() into v_verifiction_code ;
 
         -- 인증코드 생성 
         insert into tbl_auth_info(reference_id,auth_type, verification_code, expired_date, created_date )
-        values(v_user_id, 'USER_SIGN_IN',v_verifiction_code, now() + interval '3 hours', now() );   
+        values(v_user_id, 'USER_SIGN_UP',v_verifiction_code, now() + interval '3 hours', now() );   
 
     elsif( i_user_type = 'PERSON' ) then
+        v_user_role := 'FREE_USER';
          -- 회원입력 (
         insert into tbl_user_info (
             user_id, user_name, full_name, email,
             password, user_type, company_code, user_status,
             terms_of_service, privacy_policy, location_information, notification_email,
-            created_date, created_by
+            created_date, created_by, user_role
         ) values(
             v_user_id, i_e_mail_adress, i_full_name, i_e_mail_adress,
             i_password, i_user_type, null, 'NEED_AUTH',
             i_terms_of_service, i_privacy_policy, i_location_information, i_notification_email,
-            now(), v_user_id
+            now(), v_user_id, v_user_role
         );
 
         select generate_6_verification_code() into v_verifiction_code ;
 
         -- 인증코드 생성 
         insert into tbl_auth_info(reference_id,auth_type, verification_code, expired_date, created_date )
-        values(v_user_id, 'USER_SIGN_IN',v_verifiction_code, now() + interval '3 hours', now() );           
+        values(v_user_id, 'USER_SIGN_UP',v_verifiction_code, now() + interval '3 hours', now() );           
     end if;
 
     x_rtn_status := 'S';
