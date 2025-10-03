@@ -391,3 +391,163 @@ tbl_user_info_pkey 는 email 입니다.
 - 인증코드(`verification_code`)는 회원가입 시 이메일로 전달된 값을 사용합니다.
 - 성공 시 `tbl_user_info.user_status`가 `COMPLETE_AUTH`로 변경됩니다.
 - JWT 토큰은 **8시간** 동안 유효합니다.
+
+   
+# 5. 사용자 목록 조회 API
+
+## 개요
+내 회사(`company_code`)에 속한 사용자 목록을 조회하는 API입니다.  
+조회 시 사용자 정보 중 `password` 필드는 제거되어 응답됩니다.
+
+---
+
+## Endpoint
+- **POST** `/api/users/getuserlist`
+
+---
+
+## Request
+
+### Headers
+| Key             | Value                  | 설명             |
+|-----------------|------------------------|------------------|
+| Content-Type    | application/json        | 요청 데이터 타입 |
+| Authorization   | Bearer {token}          | JWT 인  증 토큰    |
+
+### Body
+```json
+{
+  "user_name": "string",
+  "company_code": "string",
+  "ip_address": "string"
+}
+```
+
+| 필드명        | 타입    | 필수 | 설명                 |
+|---------------|---------|------|----------------------|
+| user_name     | string  | Y    | 사용자명             |
+| company_code  | string  | Y    | 회사 코드            |
+| ip_address    | string  | N    | 접속한 사용자 IP 주소 |
+
+---
+
+## Response
+
+### Success (200 OK)
+```json
+{
+  "ResultCode": "0",
+  "ErrorMessage": "",
+  "users": [
+      {
+            "user_id": "4c86fc3b-1316-43d3-97b5-b7d19733dad7",
+            "user_name": "whmoon10@naver.com",
+            "external_user_name": null,
+            "full_name": "김형준",
+            "email": "whmoon10@naver.com",
+            "notes": null,
+            "total_jobs": 0,
+            "total_pages": 0,
+            "reset_by": null,
+            "reset_date": null,
+            "schedule_period": null,
+            "schedule_amount": null,
+            "schedule_start": null,
+            "deleted": "N",
+            "deleted_date": null,
+            "created_date": "2025-10-03T06:47:24.052Z",
+            "created_by": "4c86fc3b-1316-43d3-97b5-b7d19733dad7",
+            "user_source_type": null,
+            "modified_date": null,
+            "modified_by": null,
+            "department": null,
+            "office": null,
+            "card_number": null,
+            "card_number2": null,
+            "disabled_printing": "N",
+            "disabled_printing_until": null,
+            "home_directory": null,
+            "balance": 0,
+            "sysadmin": null,
+            "privilege": "ALL",
+            "company_code": 100016,
+            "user_type": "COMPANY",
+            "user_status": "NEED_AUTH",
+            "terms_of_service": "Y",
+            "privacy_policy": "N",
+            "location_information": "Y",
+            "notification_email": "Y",
+            "user_role": "PARTNER"
+        },
+        {
+            "user_id": "1be31f33-7b48-473d-bd95-3bb6af2b6d5c",
+            "user_name": "hyungseong@naver.com",
+            "external_user_name": null,
+            "full_name": "최형성",
+            "email": "hyungseong@naver.com",
+            "notes": null,
+            "total_jobs": 0,
+            "total_pages": 0,
+            "reset_by": null,
+            "reset_date": null,
+            "schedule_period": null,
+            "schedule_amount": null,
+            "schedule_start": null,
+            "deleted": "N",
+            "deleted_date": null,
+            "created_date": "2025-10-03T07:19:16.466Z",
+            "created_by": "1be31f33-7b48-473d-bd95-3bb6af2b6d5c",
+            "user_source_type": null,
+            "modified_date": null,
+            "modified_by": null,
+            "department": null,
+            "office": null,
+            "card_number": null,
+            "card_number2": null,
+            "disabled_printing": "N",
+            "disabled_printing_until": null,
+            "home_directory": null,
+            "balance": 0,
+            "sysadmin": null,
+            "privilege": "ALL",
+            "company_code": 100016,
+            "user_type": "COMPANY",
+            "user_status": "COMPLETE_AUTH",
+            "terms_of_service": "Y",
+            "privacy_policy": "Y",
+            "location_information": "Y",
+            "notification_email": "Y",
+            "user_role": ""
+        }
+  ]
+}
+```
+
+| 필드명        | 타입    | 설명                            |
+|---------------|---------|---------------------------------|
+| ResultCode    | string  | 결과 코드 ("0" = 성공, "1" = 실패) |
+| ErrorMessage  | string  | 에러 메시지 (성공 시 빈 문자열) |
+| users         | array   | 사용자 목록 객체 배열            |
+
+---
+
+### Error (401 Unauthorized)
+```json
+{
+  "ResultCode": "1",
+  "ErrorMessage": "에러 메시지 상세"
+}
+```
+
+---
+
+## Example (curl)
+```bash
+curl -X POST http://localhost:38005/api/users/getuserlist   -H "Content-Type: application/json"   -H "Authorization: Bearer {your_token}"   -d '{
+    "user_name": "hyungseong@naver.com",
+    "company_code": "1000016",
+    "ip_address": "10.15.56.135"
+  }'
+```
+
+---
