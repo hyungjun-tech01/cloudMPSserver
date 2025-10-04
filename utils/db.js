@@ -13,15 +13,6 @@ const pool = new Pool({
     connectionTimeoutMillis: 2000,
 });
 
-// 연결 테스트 (선택 사항)
-pool.on('connect', () => {
-  console.log('✅ PostgreSQL pool connected successfully.');
-});
-
-pool.on('error', (err) => {
-  console.error('❌ Unexpected error on idle client', err);
-  process.exit(-1);
-});
 
 
 module.exports = pool; 

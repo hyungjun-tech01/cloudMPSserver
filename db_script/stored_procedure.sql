@@ -163,7 +163,7 @@ BEGIN
 
         -- 인증코드 생성 
         insert into tbl_auth_info(reference_id,auth_type, verification_code, expired_date, created_date )
-        values(v_user_id, 'USER_SIGN_UP',v_verifiction_code, now() + interval '3 hours', now() );           
+        values(c, 'USER_SIGN_UP',v_verifiction_code, now() + interval '3 hours', now() );           
     end if;
 
     x_rtn_status := 'S';
@@ -182,11 +182,11 @@ $$ LANGUAGE plpgsql;
 
 
 
-drop procedure IF EXISTS create_client_info ;
+drop procedure IF EXISTS create_client ;
 
 
 -- 파트너 거래처 생성, 변경 
-CREATE OR REPLACE Procedure create_client_info(
+CREATE OR REPLACE Procedure create_client(
     i_action_type                 in text,   -- CREATE, CHANGE, COMPANY_CLIENT_LINK
     i_client_id                   in text,    
     i_company_code                in text,   
@@ -219,7 +219,7 @@ CREATE OR REPLACE Procedure create_client_info(
     i_sales_resource              in text,   
     i_application_engineer        in text,   
     i_region                      in text,   
-    i_status					  in text,							
+    i_status                      in text,							
     x_client_id                   out text,   
     x_rtn_status                  out text,
     x_rtn_msg                     out text
@@ -243,9 +243,9 @@ BEGIN
             client_memo, created_by, create_date, modify_date, recent_user,
             account_code, bank_name, account_owner, sales_resource,  
             application_engineer, region, status )													
-        values(v_client_id, i_company_code, i_member_company_code,            
+        values(v_client_id, i_company_code::integer, i_member_company_code::integer,            
             i_client_group, i_client_scale, i_deal_type, i_client_name, i_client_name_en,                 
-            i_business_registration_code, i_establishment_date, i_closure_date,                   
+            i_business_registration_code, i_establishment_date::date, i_closure_date::date,                   
             i_ceo_name, i_business_type, i_business_item, i_industry_type, i_client_zip_code,                
             i_client_address, i_client_phone_number, i_client_fax_number, i_homepage,                       
             i_client_memo, v_user_id, now(), now(), v_user_id,
@@ -255,16 +255,16 @@ BEGIN
 
     if(i_action_type = 'CHANGE' ) then
         update tbl_client_info
-            set company_code = COALESCE(i_company_code, company_code),
-                member_company_code =  COALESCE(i_member_company_code, member_company_code),
+            set company_code = COALESCE(i_company_code::integer, company_code),
+                member_company_code =  COALESCE(i_member_company_code::integer, member_company_code),
                 client_group = COALESCE(i_client_group, client_group),
                 client_scale = COALESCE(i_client_scale, client_scale),
                 deal_type    = COALESCE(i_deal_type, deal_type),                   
                 client_name  = COALESCE(i_client_name, client_name),                     
                 client_name_en  = COALESCE(i_client_name_en, client_name_en),                      
                 business_registration_code = COALESCE(i_business_registration_code, business_registration_code),        
-                establishment_date = COALESCE(i_establishment_date, establishment_date),               
-                closure_date  = COALESCE(i_closure_date, closure_date),                   
+                establishment_date = COALESCE(i_establishment_date::date, establishment_date),               
+                closure_date  = COALESCE(i_closure_date::date, closure_date),                   
                 ceo_name      = COALESCE(i_ceo_name, ceo_name),                    
                 business_type = COALESCE(i_business_type, business_type),                        
                 business_item = COALESCE(i_business_item, business_item),                       

@@ -227,12 +227,12 @@ curl -X POST http://localhost:38005/api/users/getuserinfo \
 | `country`                 | string   | ✅   | 국가 |
 | `terms_of_service`        | boolean  | ✅   | 이용약관 동의 여부 |
 | `privacy_policy`          | boolean  | ✅   | 개인정보 처리방침 동의 여부 |
-| `location_information`    | boolean  | ❌   | 위치정보 동의 여부 |
-| `notification_email`      | boolean  | ❌   | 메일 수신 동의 여부 |
+| `location_information`    | boolean  | ✅   | 위치정보 동의 여부 |
+| `notification_email`      | boolean  | ✅   | 메일 수신 동의 여부 |
 | `full_name`               | string   | ✅   | 사용자 이름 |
 | `e_mail_adress`           | string   | ✅   | 이메일 주소 |
 | `password`                | string   | ✅   | 비밀번호 (서버에서 bcrypt 해시 처리) |
-| `ip_address`              | string   | ❌   | 접속 IP 주소 |
+| `ip_address`              | string   | ✅   | 접속 IP 주소 |
 
  - COMPANY 타입일 경우 회사코드가 들어오면 해당 회사의 사용자를 등록하고 
  - 회사코드가 들어 오지 않으면 회사를 생성하여 회사코드를 리턴해 준다. 
@@ -336,8 +336,8 @@ tbl_user_info_pkey 는 email 입니다.
 | `user_name`        | string | ✅   | 사용자 아이디 |
 | `password`         | string | ✅   | 비밀번호 |
 | `verification_code`| string | ✅   | 회원가입 시 이메일로 받은 인증 코드 |
-| `company_code`     | string | ❌   | 회사 코드 (존재하는 경우 검증) |
-| `ip_address`       | string | ❌   | 접속 IP 주소 |
+| `company_code`     | string | ❌   | 회사 코드 (기업회원인 경우엔 입력) |
+| `ip_address`       | string | ✅   | 접속 IP 주소 |
 
 ### Example (Request)
 ```json
@@ -419,6 +419,11 @@ tbl_user_info_pkey 는 email 입니다.
 ### Body
 ```json
 {
+  "search_user_name": "",
+  "search_full_name": "최",
+  "search_email": "",
+  "items_per_page" : 10, 
+  "current_page" : 1, 
   "user_name": "string",
   "company_code": "string",
   "ip_address": "string"
@@ -427,9 +432,14 @@ tbl_user_info_pkey 는 email 입니다.
 
 | 필드명        | 타입    | 필수 | 설명                 |
 |---------------|---------|------|----------------------|
-| user_name     | string  | Y    | 사용자명             |
+| search_user_name     | string  | N    | 조회조건 user_name 이메일임 |
+| search_full_name  | string  | N    | 조회조건 사용자 이름           |
+| search_email    | string  | N    | 조회조건 이메일 |
+| items_per_page     | int  | N    | 페이지당 아이템수   |
+| current_page  | int  | Y    | 현재 페이지             |
+| user_name     | string  | Y    | 현재 사용자명             |
 | company_code  | string  | Y    | 회사 코드            |
-| ip_address    | string  | N    | 접속한 사용자 IP 주소 |
+| ip_address    | string  | Y    | 접속한 사용자 IP 주소 |
 
 ---
 
@@ -440,6 +450,7 @@ tbl_user_info_pkey 는 email 입니다.
 {
   "ResultCode": "0",
   "ErrorMessage": "",
+  "totalPages": 1,
   "users": [
       {
             "user_id": "4c86fc3b-1316-43d3-97b5-b7d19733dad7",
