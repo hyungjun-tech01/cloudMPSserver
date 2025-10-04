@@ -27,6 +27,9 @@ $$ language plpgsql;
 -- check 
 select generate_6_verification_code();
 
+
+drop procedure IF EXISTS signup_request ;
+
 -- 기업회원가입 / 일반 회원 가입 신청(6자리 인증 코드 반환)
 --  회원타입, 회사명, 사업자번호, 대표자명, 국가, 언어, 시간대, 통화 , 이용약관동의, 개인정보수집동의, 위치정보동의, 메일동의, 이름, e_mail_address, 패스워드 
 CREATE OR REPLACE Procedure signup_request(
@@ -51,7 +54,7 @@ CREATE OR REPLACE Procedure signup_request(
     x_verification_code                 out text,
     x_company_code                      out text,   -- 컴퍼니코드가 들어 오지 않은 기업회원의 경우 컴퍼니코드까지 함께 리턴 
     x_rtn_status                        out text,
-    x_trn_msg                           out text
+    x_rtn_msg                           out text
 )AS $$
 DECLARE
     v_company_code integer ;
@@ -164,20 +167,149 @@ BEGIN
     end if;
 
     x_rtn_status := 'S';
-    x_trn_msg := '';
+    x_rtn_msg := '';
     x_company_code := v_company_code;
     x_verification_code := v_verifiction_code;
     
 exception
     WHEN others THEN
         -- 기타 모든 예외 처리
-        GET STACKED DIAGNOSTICS x_trn_msg = MESSAGE_TEXT;
+        GET STACKED DIAGNOSTICS x_rtn_msg = MESSAGE_TEXT;
         x_rtn_status := 'E'; -- Error
-        x_trn_msg := '에러 발생: ' || x_trn_msg || ')';    
+        x_rtn_msg := '에러 발생: ' || x_rtn_msg || ')';    
 END;
 $$ LANGUAGE plpgsql;
 
 
--- 기업회원가입/일반 회원 가입 완료(인증코드 인증 후 )
+
+drop procedure IF EXISTS create_client_info ;
 
 
+-- 파트너 거래처 생성, 변경 
+CREATE OR REPLACE Procedure create_client_info(
+    i_action_type                 in text,   -- CREATE, CHANGE, COMPANY_CLIENT_LINK
+    i_client_id                   in text,    
+    i_company_code                in text,   
+    i_member_company_code         in text,   
+    i_client_group                in text,   
+    i_client_scale                in text,   
+    i_deal_type                   in text,   
+    i_client_name                 in text,   
+    i_client_name_en              in text,   
+    i_business_registration_code  in text,   
+    i_establishment_date          in text,   
+    i_closure_date                in text,   
+    i_ceo_name                    in text,   
+    i_business_type               in text,   
+    i_business_item               in text,   
+    i_industry_type               in text,   
+    i_client_zip_code             in text,   
+    i_client_address              in text,   
+    i_client_phone_number         in text,   
+    i_client_fax_number           in text,   
+    i_homepage                    in text,   
+    i_client_memo                 in text,   
+    i_created_by                  in text,   
+    i_create_date                 in text,   
+    i_modify_date                 in text,   
+    i_recent_user                 in text,   
+    i_account_code                in text,   
+    i_bank_name                   in text,   
+    i_account_owner               in text,   
+    i_sales_resource              in text,   
+    i_application_engineer        in text,   
+    i_region                      in text,   
+    i_status					  in text,							
+    x_client_id                   out text,   
+    x_rtn_status                  out text,
+    x_rtn_msg                     out text
+)AS $$
+DECLARE
+    v_client_id varchar(36) ;
+    v_user_id varchar(36);
+BEGIN
+    v_client_id := i_client_id;
+    select user_id into v_user_id
+     from tbl_user_info tbi
+     where tbi.user_name = i_created_by or tbi.user_name = i_recent_user;
+
+    if(i_action_type = 'CREATE' ) then
+        select uuid_generate_v4() into v_client_id; 
+        insert into tbl_client_info(client_id,company_code,member_company_code,            
+            client_group, client_scale, deal_type, client_name, client_name_en,                 
+            business_registration_code, establishment_date, closure_date,                   
+            ceo_name, business_type, business_item, industry_type, client_zip_code,                
+            client_address, client_phone_number, client_fax_number,homepage,                       
+            client_memo, created_by, create_date, modify_date, recent_user,
+            account_code, bank_name, account_owner, sales_resource,  
+            application_engineer, region, status )													
+        values(v_client_id, i_company_code, i_member_company_code,            
+            i_client_group, i_client_scale, i_deal_type, i_client_name, i_client_name_en,                 
+            i_business_registration_code, i_establishment_date, i_closure_date,                   
+            i_ceo_name, i_business_type, i_business_item, i_industry_type, i_client_zip_code,                
+            i_client_address, i_client_phone_number, i_client_fax_number, i_homepage,                       
+            i_client_memo, v_user_id, now(), now(), v_user_id,
+            i_account_code, i_bank_name, i_account_owner, i_sales_resource,  
+            i_application_engineer, i_region, i_status);
+    end if;
+
+    if(i_action_type = 'CHANGE' ) then
+        update tbl_client_info
+            set company_code = COALESCE(i_company_code, company_code),
+                member_company_code =  COALESCE(i_member_company_code, member_company_code),
+                client_group = COALESCE(i_client_group, client_group),
+                client_scale = COALESCE(i_client_scale, client_scale),
+                deal_type    = COALESCE(i_deal_type, deal_type),                   
+                client_name  = COALESCE(i_client_name, client_name),                     
+                client_name_en  = COALESCE(i_client_name_en, client_name_en),                      
+                business_registration_code = COALESCE(i_business_registration_code, business_registration_code),        
+                establishment_date = COALESCE(i_establishment_date, establishment_date),               
+                closure_date  = COALESCE(i_closure_date, closure_date),                   
+                ceo_name      = COALESCE(i_ceo_name, ceo_name),                    
+                business_type = COALESCE(i_business_type, business_type),                        
+                business_item = COALESCE(i_business_item, business_item),                       
+                industry_type  = COALESCE(i_industry_type, industry_type),                    
+                client_zip_code   = COALESCE(i_client_zip_code, client_zip_code),                       
+                client_address    = COALESCE(i_client_address, client_address),                
+                client_phone_number  = COALESCE(i_client_phone_number, client_phone_number),             
+                client_fax_number    = COALESCE(i_client_fax_number, client_fax_number),              
+                homepage             = COALESCE(i_homepage, homepage),              
+                client_memo          = COALESCE(i_client_memo, client_memo),                     
+                modify_date          = now()  ,               
+                recent_user          = v_user_id ,          
+                account_code         = COALESCE(i_account_code, account_code),                
+                bank_name            = COALESCE(i_bank_name, bank_name),                 
+                account_owner        = COALESCE(i_account_owner, account_owner),                  
+                sales_resource       = COALESCE(i_sales_resource, sales_resource),                 
+                application_engineer     = COALESCE(i_application_engineer, application_engineer),         
+                region                  = COALESCE(i_region, region),          
+                status					= COALESCE(i_status, status)						
+        where client_id = v_client_id;
+    end if;
+
+    if(i_action_type = 'COMPANY_CLIENT_LINK') then
+        if (i_member_company_code > 0 and 
+           (i_business_registration_code is not null or 
+            i_business_registration_code !== '' or 
+            i_business_registration_code !== 'undefined') ) then
+
+            update tbl_client_info
+            set member_company_code = i_member_company_code
+            where business_registration_code = i_business_registration_code;
+        else
+            RAISE EXCEPTION 'Member Company Code가 유효하지 않거나 Business Registration Code가 누락';
+        end if;
+    end if;
+
+    x_rtn_status := 'S';
+    x_rtn_msg := '';   
+    x_client_id := v_client_id;
+exception
+    WHEN others THEN
+        -- 기타 모든 예외 처리
+        GET STACKED DIAGNOSTICS x_rtn_msg = MESSAGE_TEXT;
+        x_rtn_status := 'E'; -- Error
+        x_rtn_msg := '에러 발생: ' || x_rtn_msg || ')';   
+        x_client_id := '';
+END;
+$$ LANGUAGE plpgsql;

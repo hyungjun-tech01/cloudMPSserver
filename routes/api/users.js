@@ -5,11 +5,11 @@ const bcrypt = require('bcrypt'); // bcrypt 모듈 추가
 
 const router = express.Router();
 
-// PostgreSQL 연결을 위한 Pool 객체 정의 (예시)
-const { Pool } = require('pg');
 
 const localcheck = require('../../middleware/localcheck');
 const authMiddleware = require('../../middleware/authMiddleware');
+const getSafePagination = require('../../utils/getSafePagination');
+const pool  = require('../../utils/db');
 
 const nodemailer = require('nodemailer');
 
@@ -22,13 +22,6 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
 
 // login : host:port번호/api/users/login 
 router.post('/login',localcheck, async(req, res) => {
@@ -251,7 +244,7 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
   const x_verification_code = signUp.rows[0].x_verification_code;
   const x_company_code = signUp.rows[0].x_company_code;
   const x_rtn_status = signUp.rows[0].x_rtn_status;
-  const x_trn_msg = signUp.rows[0].x_trn_msg;
+  const x_rtn_msg = signUp.rows[0].x_rtn_msg;
 
   if (x_rtn_status == 'S') {
   // 4-1. 이메일 전송 로직
@@ -273,7 +266,7 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
 
      res.json({ ResultCode: '0', ErrorMessage: '' , verification_code:x_verification_code, company_code:x_company_code });
   }else{
-    res.json({ ResultCode: '1', ErrorMessage: x_trn_msg});  
+    res.json({ ResultCode: '1', ErrorMessage: x_rtn_msg});  
   }
 
   }catch(err){
@@ -287,20 +280,44 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
 
 // 내 회사 사용자 목록 조회
 router.post('/getuserlist', localcheck, authMiddleware, async(req, res) => {
-  const {user_name, company_code, ip_address} = req.body;
+  const {search_user_name, search_full_name, search_email, items_per_page, current_page, user_name, company_code, ip_address} = req.body;
   
   console.log('getuserlist');
+
+  // 값이 undefined, null 또는 없는 경우 ''로 설정하여 SQL 쿼리 안전성 확보
+  const searchUserName = search_user_name ?? '';
+  const searchFullName = search_full_name ?? '';
+  const searchEmail = search_email ?? '';
+
+  //  페이징 함수 호출 및 변수 설정 
+  const { itemsPerPage, currentPage, offset } 
+    = getSafePagination(items_per_page, current_page); 
   
   try{
+    const count = await pool.query(`SELECT count(*) 
+      FROM tbl_user_info 
+      WHERE company_code = $1 
+      and user_name ilike '%'||$2||'%'
+      and full_name ilike '%'||$3||'%'
+      and email ilike '%'||$4||'%'`, [company_code, searchUserName, searchFullName, searchEmail]);
+
+    const totalPages = Math.ceil(Number(count.rows[0].count) / itemsPerPage);
+   
+
     const usersResult = await pool.query(`SELECT *
-      FROM tbl_user_info WHERE company_code = $1`, [company_code]);
+      FROM tbl_user_info 
+      WHERE company_code = $1 
+      and user_name ilike '%'||$2||'%'
+      and full_name ilike '%'||$3||'%'
+      and email ilike '%'||$4||'%'
+      limit $5 offset $6`, [company_code, searchUserName, searchFullName, searchEmail, itemsPerPage, offset]);
 
     let users = usersResult.rows;
 
     // 각 user 객체에서 password 속성 제거
     users = users.map(({ password, ...rest }) => rest);
 
-    res.json({ ResultCode: '0', ErrorMessage: '', users });
+    res.json({ ResultCode: '0', ErrorMessage: '', totalPages:totalPages, users:users });
     res.end();
 
   }catch(err){
@@ -311,7 +328,6 @@ router.post('/getuserlist', localcheck, authMiddleware, async(req, res) => {
       res.end();
   }
 });
-
 
 // 모듈로 내보내기
 module.exports = router;

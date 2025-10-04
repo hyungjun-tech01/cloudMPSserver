@@ -101,4 +101,41 @@ CREATE SEQUENCE company_code_seq
  alter table tbl_company_info add column company_type varchar(30);
  -- stored_procedure 변경 
  
- 
+
+ --2025.10.03
+drop table if exists tbl_client_info;
+
+create table tbl_client_info(
+client_id                            varchar(36)    primary key, 
+company_code                         integer	    ,
+member_company_code                  integer	    , 
+client_group                                varchar(255)   ,
+client_scale                         varchar(100)   ,
+deal_type                            varchar(100)   ,
+client_name                          varchar(50)    not null,
+client_name_en                       varchar(100)   ,
+business_registration_code           varchar(50)    ,
+establishment_date                   date	        ,
+closure_date                         date	        ,
+ceo_name                             varchar(50)    ,
+business_type                        varchar(100)   ,
+business_item                        varchar(100)   ,
+industry_type                        varchar(50)    ,
+client_zip_code                      varchar(50)    ,
+client_address                       varchar(255)   ,
+client_phone_number                  varchar(50)    ,
+client_fax_number                    varchar(50)    ,
+homepage                             varchar(255)   ,
+client_memo                          text	        ,
+created_by                           varchar(50)    ,
+create_date                          timestamp	    ,
+modify_date                          timestamp	    ,
+recent_user                          varchar(50)    ,
+account_code                         varchar(50)    ,
+bank_name                            varchar(50)    ,
+account_owner                        varchar(50)    ,
+sales_resource                       varchar(50)    ,
+application_engineer                 varchar(50)    ,
+region                               varchar(50)    ,
+status								 varchar(50) 	    
+ );
