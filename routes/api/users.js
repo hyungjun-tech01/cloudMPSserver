@@ -26,7 +26,7 @@ const transporter = nodemailer.createTransport({
 // login : host:port번호/api/users/login 
 router.post('/login',localcheck, async(req, res) => {
   const {user_name, password, company_code, ip_address} = req.body;
-
+  console.log('try login');
   try{
 
       // login 시도했던 로그 생성 .
@@ -263,6 +263,15 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
         <p>감사합니다.</p>
     `
   };
+
+  // 메일 전송
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`[메일 전송 성공] → ${e_mail_adress}`);
+  } catch (mailErr) {
+    console.error(`[메일 전송 실패] ${e_mail_adress}:`, mailErr.message);
+    // 메일 실패해도 회원가입 절차는 성공으로 처리
+  }
 
      res.json({ ResultCode: '0', ErrorMessage: '' , verification_code:x_verification_code, company_code:x_company_code });
   }else{

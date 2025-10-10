@@ -240,7 +240,7 @@ curl -X POST http://localhost:38005/api/users/getuserinfo \
 ### Example (Request)
 ```json
 {
-  "user_type": "company",
+  "user_type": "COMPANY",
   "company_name": "테스트 주식회사",
   "company_type": "PARTNER",
   "business_registration_code": "123-45-67890",
