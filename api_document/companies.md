@@ -22,7 +22,7 @@ DB 테이블 `tbl_company_info`의 데이터를 반환합니다.
 ---
 
 ## Endpoint
-- **POST** `/api/users/getcompanyinfo`
+- **POST** `/api/companies/getcompanyinfo`
 
 ---
 
