@@ -11,11 +11,8 @@ const pool  = require('../../utils/db');
 const getSafePagination = require('../../utils/getSafePagination');
 
 // 클라이언트 등록 
-router.post('/create_client',localcheck, authMiddleware, async(req, res) => {
+router.post('/create',localcheck, authMiddleware, async(req, res) => {
   const {
-    action_type                 ,  // CREATE, CHANGE, COMPANY_CLIENT_LINK
-    client_id                   ,  
-    member_company_code         ,   
     client_group                ,   
     client_scale                ,   
     deal_type                   ,   
@@ -34,10 +31,6 @@ router.post('/create_client',localcheck, authMiddleware, async(req, res) => {
     client_fax_number           ,   
     homepage                    ,   
     client_memo                 ,   
-    created_by                  ,   
-    create_date                 ,   
-    modify_date                 ,   
-    recent_user                 ,   
     account_code                ,   
     bank_name                   ,   
     account_owner               ,   
@@ -69,58 +62,46 @@ router.post('/create_client',localcheck, authMiddleware, async(req, res) => {
           throw new Error('closure_date: 날짜는 YYYY.MM.DD 형식이어야 합니다.');
         }
       }
-      
+
+      const user_id = await pool.query(`select user_id
+        from tbl_user_info tbi
+        where tbi.user_name = $1`,[user_name]);
+
+      const v_user_id = user_id.rows[0].user_id;
+       
   
-      const createClient = await pool.query(`call create_client($1, $2, $3, $4, 
-        $5, $6, $7, $8, $9, $10, $11, $12, $13, 
-        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, 
-        $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36)` ,
-      [action_type              ,
-       client_id                , 
-       company_code             , 
-       member_company_code      , 
-       client_group             , 
-       client_scale             , 
-       deal_type                , 
-       client_name              , 
-       client_name_en           , 
-       business_registration_code ,
-       establishment_date_input   , 
-       closure_date_input         , 
-       ceo_name                 , 
-       business_type            , 
-       business_item            , 
-       industry_type            , 
-       client_zip_code          , 
-       client_address           , 
-       client_phone_number      , 
-       client_fax_number        , 
-       homepage                 , 
-       client_memo              , 
-       created_by               , 
-       create_date              , 
-       modify_date              , 
-       recent_user              , 
-       account_code             , 
-       bank_name                , 
-       account_owner            , 
-       sales_resource           , 
-       application_engineer     , 
-       region                   , 
-       status                   , 
-       null                     , 
-       null                     , 
-       null                     , 
+      const client_id = await pool.query(`select uuid_generate_v4() uuid`,[]);
+
+      const v_client_id  = client_id.rows[0].uuid;
+
+      const createClient = await pool.query(`insert into tbl_client_info(client_id,company_code,            
+            client_group, client_scale, deal_type, client_name, client_name_en,                 
+            business_registration_code, establishment_date, closure_date,                   
+            ceo_name, business_type, business_item, industry_type, client_zip_code,                
+            client_address, client_phone_number, client_fax_number,homepage,                       
+            client_memo, created_by, create_date, modify_date, recent_user,
+            account_code, bank_name, account_owner, sales_resource,  
+            application_engineer, region, status )													
+        values($1, $2::integer,            
+            $3,  $4,        $5,     $6,    $7,                 
+            $8,  $9::date,  $10::date,                   
+            $11, $12,       $13,      $14, $15,                
+            $16, $17,       $18,      $19,                       
+            $20, $21,       now(),    now(), $22,
+            $23, $24,       $25,      $26,  
+            $27, $28,       $29)`,
+      [v_client_id, company_code,             
+        client_group, client_scale, deal_type, client_name, client_name_en,                 
+        business_registration_code, establishment_date, closure_date,                   
+        ceo_name, business_type, business_item, industry_type, client_zip_code,                
+        client_address, client_phone_number, client_fax_number, homepage,                       
+        client_memo, v_user_id,  v_user_id,
+        account_code, bank_name, account_owner, sales_resource,  
+        application_engineer, region, status
     ]);
-    const x_client_id = createClient.rows[0].x_client_id;
-    const x_rtn_status = createClient.rows[0].x_rtn_status;
-    const x_rtn_msg = createClient.rows[0].x_rtn_msg;
+    const x_client_id = v_client_id;
   
-    if( x_rtn_status === 'S' ){
-      res.json({ ResultCode: '0', ErrorMessage: '' , x_client_id:x_client_id });
-    }else{
-      res.json({ ResultCode: '1', ErrorMessage: x_rtn_msg});  
-    }
+    res.json({ ResultCode: '0', ErrorMessage: '' , x_client_id:x_client_id });
 
     }catch(err){
         console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/clients/create'] reqBody Error:`, client_name );
@@ -129,6 +110,126 @@ router.post('/create_client',localcheck, authMiddleware, async(req, res) => {
         res.status(401).json({ ResultCode: '1', ErrorMessage: err.message });
     }
 });
+
+// 클라이언트 정보 수정 
+router.post('/modify',localcheck, authMiddleware, async(req, res) => {
+  const {
+    client_id                   ,  
+    client_group                ,   
+    client_scale                ,   
+    deal_type                   ,   
+    client_name                 ,   
+    client_name_en              ,   
+    business_registration_code  ,   
+    establishment_date          ,   
+    closure_date                ,   
+    ceo_name                    ,   
+    business_type               ,   
+    business_item               ,   
+    industry_type               ,   
+    client_zip_code             ,   
+    client_address              ,   
+    client_phone_number         ,   
+    client_fax_number           ,   
+    homepage                    ,   
+    client_memo                 ,   
+    account_code                ,   
+    bank_name                   ,   
+    account_owner               ,   
+    sales_resource              ,   
+    application_engineer        ,   
+    region                      ,   
+    status					            ,	
+    user_name                   , 
+    company_code, ip_address} = req.body;  
+
+    try{
+
+      const dateRegex = /^\d{4}\.\d{2}\.\d{2}$/;
+      let establishment_date_input = establishment_date;
+      let closure_date_input = closure_date;
+
+      if (establishment_date_input === null || establishment_date_input === undefined || String(establishment_date_input).trim() === '') {
+        establishment_date_input = null; 
+      } else {
+        if (!dateRegex.test(establishment_date_input)) {
+          throw new Error('establishment_date : 날짜는 YYYY.MM.DD 형식이어야 합니다.');
+        }
+      }
+
+      if (closure_date_input === null || closure_date_input === undefined || String(closure_date_input).trim() === '') {
+        closure_date_input = null; 
+      } else {
+        if (!dateRegex.test(closure_date_input)) {
+          throw new Error('closure_date: 날짜는 YYYY.MM.DD 형식이어야 합니다.');
+        }
+      }
+
+      const user_id = await pool.query(`select user_id
+        from tbl_user_info tbi
+        where tbi.user_name = $1`,[user_name]);
+
+      const v_user_id = user_id.rows[0].user_id;
+       
+      if(!client_id || !company_code){
+        const error = new Error('client_id와 company_code 필수입니다.');
+        error.statusCode = 400; // HTTP 상태 코드 지정
+        error.resultCode = '2'; // 사용자 정의 ResultCode 지정 (옵션)
+        throw error;
+      }
+      
+
+      const createClient = await pool.query(`
+      update tbl_client_info
+      set client_group         = $3,
+          client_scale         = $4,
+          deal_type            = $5,                   
+          client_name          = $6,                     
+          client_name_en       = $7,                      
+          business_registration_code = $8,        
+          establishment_date   = $9::date,                
+          closure_date         = $10::date,                    
+          ceo_name             = $11,         
+          business_type        = $12,                  
+          business_item        = $13,                 
+          industry_type        = $14,              
+          client_zip_code      = $15,                   
+          client_address       = $16,           
+          client_phone_number  = $17,             
+          client_fax_number    = $18,            
+          homepage             = $19,   
+          client_memo          = $20,             
+          modify_date          = now()  ,               
+          recent_user          = $21,          
+          account_code         = COALESCE($22, account_code),                
+          bank_name            = COALESCE($23, bank_name),                 
+          account_owner        = COALESCE($24, account_owner),                  
+          sales_resource       = COALESCE($25, sales_resource),                 
+          application_engineer = COALESCE($26, application_engineer),         
+          region               = COALESCE($27, region),          
+          status					     = COALESCE($28, status)						
+        where client_id = $1 
+        and company_code = $2 ` ,
+      [client_id, company_code,             
+        client_group, client_scale, deal_type, client_name, client_name_en,                 
+        business_registration_code, establishment_date, closure_date,                   
+        ceo_name, business_type, business_item, industry_type, client_zip_code,                
+        client_address, client_phone_number, client_fax_number, homepage,                       
+        client_memo, v_user_id, 
+        account_code, bank_name, account_owner, sales_resource,  
+        application_engineer, region, status
+    ]);
+     
+    res.json({ ResultCode: '0', ErrorMessage: '' });
+
+    }catch(err){
+        console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/clients/modify'] reqBody Error:`, client_id );
+        console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/clients/modify '] Error:`, err.message); 
+        const resultCode = err.resultCode || '1';
+        res.status(401).json({ ResultCode: resultCode, ErrorMessage: err.message });
+    }
+});
+
 
   // 내 회사 클라이언트들  정보 조회
 router.post('/getclientlist',localcheck, authMiddleware, async(req, res) => {

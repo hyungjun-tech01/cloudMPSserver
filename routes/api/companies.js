@@ -7,6 +7,7 @@ const router = express.Router();
 
 const localcheck = require('../../middleware/localcheck');
 const authMiddleware = require('../../middleware/authMiddleware');
+const checkRateLimit = require('../../middleware/checkRateLimit');
 const pool  = require('../../utils/db');
 
 
@@ -39,7 +40,7 @@ router.post('/getcompanyinfo',localcheck, authMiddleware, async(req, res) => {
   });
 
 // 컴퍼니리스트 정보 조회 by 회사코드, 회사이름, 사업자번호 , 로그인 전에 보내주어야 함.
-router.post('/getcompanylist_query',localcheck, async(req, res) => {
+router.post('/getcompanylist_query', checkRateLimit , localcheck, async(req, res) => {
 
   const {company_code, 
           company_name, 
@@ -89,7 +90,8 @@ router.post('/getcompanylist_query',localcheck, async(req, res) => {
 
     const companys = await pool.query(`SELECT company_code, company_name, company_address
       FROM tbl_company_info 
-      WHERE ${whereClause}`, params);
+      WHERE ${whereClause}
+      LIMIT 50`, params);
 
       if (companys.rows.length === 0) {
           const error = new Error('조회된 회사 정보가 없습니다.');
