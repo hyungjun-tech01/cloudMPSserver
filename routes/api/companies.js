@@ -38,8 +38,8 @@ router.post('/getcompanyinfo',localcheck, authMiddleware, async(req, res) => {
   
   });
 
-// 컴퍼니리스트 정보 조회 by 회사코드, 회사이름, 사업자번호 
-router.post('/getcompanylist_query',localcheck, authMiddleware, async(req, res) => {
+// 컴퍼니리스트 정보 조회 by 회사코드, 회사이름, 사업자번호 , 로그인 전에 보내주어야 함.
+router.post('/getcompanylist_query',localcheck, async(req, res) => {
 
   const {company_code, 
           company_name, 
@@ -87,7 +87,7 @@ router.post('/getcompanylist_query',localcheck, authMiddleware, async(req, res) 
     const whereClause = conditions.join(' OR ');
 
 
-    const companys = await pool.query(`SELECT *
+    const companys = await pool.query(`SELECT company_code, company_name, company_address
       FROM tbl_company_info 
       WHERE ${whereClause}`, params);
 

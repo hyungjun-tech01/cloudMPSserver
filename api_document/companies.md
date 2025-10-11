@@ -147,7 +147,6 @@ curl -X POST http://localhost:38005/api/users/getcompanyinfo   -H "Content-Type:
 ## Request
 ### Headers
 - `Content-Type: application/json`
-- `session_token`: 로그인 시 발급된 JWT 토큰
 
 ### Body
 ```json
@@ -175,68 +174,17 @@ curl -X POST http://localhost:38005/api/users/getcompanyinfo   -H "Content-Type:
   "ResultCode": "0",
   "ErrorMessage": "",
   "companies": [
-     {
+       {
             "company_code": 100000,
-            "deal_company_code": 100000,
-            "company_group": null,
-            "company_scale": null,
-            "deal_type": null,
             "company_name": "마일레이션",
-            "company_name_en": null,
-            "business_registration_code": "123-45-67890",
-            "establishment_date": null,
-            "closure_date": null,
-            "ceo_name": "홍길동",
-            "business_type": null,
-            "business_item": null,
-            "industry_type": null,
-            "company_zip_code": null,
-            "company_address": null,
-            "company_phone_number": null,
-            "company_fax_number": null,
-            "homepage": null,
-            "company_memo": null,
-            "create_user": "d44d8825-a91d-486c-9e2e-0a6b6a9b8db6",
-            "create_date": "2025-09-28T07:38:43.670Z",
-            "modify_date": "2025-09-28T07:38:43.670Z",
-            "recent_user": "d44d8825-a91d-486c-9e2e-0a6b6a9b8db6",
-            "counter": null,
-            "account_code": null,
-            "bank_name": null,
-            "account_owner": null,
-            "sales_resource": null,
-            "application_engineer": null,
-            "region": null,
-            "status": null,
-            "contract_expiraton_date": null,
-            "language": "ko",
-            "time_zone": "Asia/Seoul",
-            "currency_code": "KRW",
-            "country": "KOR",
-            "company_type": null
+            "company_address": null
         },
         {
             "company_code": 100005,
-            "deal_company_code": 100000,
-            "company_group": null,
-            "company_scale": null,
-            "deal_type": null,
             "company_name": "현준스컴퍼니",
-            "company_name_en": null,
-            "business_registration_code": "123-9880-111",
-            "establishment_date": null,
-            "closure_date": null,
-            "ceo_name": "김형준",
-            "business_type": null,
-            "business_item": null,
-            "industry_type": null,
-            "company_zip_code": null,
-            "company_address": null,
-            "company_phone_number": null,
-            "company_fax_number": null,
-            "homepage": null,
-            "company_memo": null,
-            ......
+            "company_address": null
+        },
+        .....
   ]
 }
 ```
@@ -258,11 +206,10 @@ curl -X POST http://localhost:38005/api/users/getcompanyinfo   -H "Content-Type:
 
 ## Process Flow
 1. `localcheck` 미들웨어 실행  
-2. `authMiddleware` 토큰 인증  
-3. 요청값 검증 (회사코드, 회사명, 사업자번호 중 최소 하나 필수)  
-4. 조건에 맞는 `tbl_company_info` 검색 (ILIKE 부분 검색 지원)  
-5. 검색 결과 없으면 `ResultCode=3` 반환  
-6. 성공 시 `ResultCode=0` 과 결과 배열 반환  
+2. 요청값 검증 (회사코드, 회사명, 사업자번호 중 최소 하나 필수)  
+3. 조건에 맞는 `tbl_company_info` 검색 (ILIKE 부분 검색 지원)  
+4. 검색 결과 없으면 `ResultCode=3` 반환  
+5. 성공 시 `ResultCode=0` 과 결과 배열 반환  
 
 ## Example (curl)
 ```bash
