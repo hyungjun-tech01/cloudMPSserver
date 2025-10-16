@@ -225,10 +225,10 @@ curl -X POST http://localhost:38005/api/users/getuserinfo \
 | `time_zone`               | string   | ✅   | 시간대 (예: Asia/Seoul) |
 | `currency_code`           | string   | ✅   | 통화 코드 (예: KRW, USD 등) |
 | `country`                 | string   | ✅   | 국가 |
-| `terms_of_service`        | boolean  | ✅   | 이용약관 동의 여부 |
-| `privacy_policy`          | boolean  | ✅   | 개인정보 처리방침 동의 여부 |
-| `location_information`    | boolean  | ✅   | 위치정보 동의 여부 |
-| `notification_email`      | boolean  | ✅   | 메일 수신 동의 여부 |
+| `terms_of_service`        | string  | ✅   | 이용약관 동의 여부 Y/N|
+| `privacy_policy`          | string  | ✅   | 개인정보 처리방침 동의 여부 Y/N|
+| `location_information`    | string  | ✅   | 위치정보 동의 여부 Y/N|
+| `notification_email`      | string  | ✅   | 메일 수신 동의 여부 Y/N|
 | `full_name`               | string   | ✅   | 사용자 이름 |
 | `e_mail_adress`           | string   | ✅   | 이메일 주소 |
 | `password`                | string   | ✅   | 비밀번호 (서버에서 bcrypt 해시 처리) |

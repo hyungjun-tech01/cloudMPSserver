@@ -40,6 +40,8 @@ CREATE OR REPLACE Procedure signup_request(
     i_company_code                      in text, -- 기업회원인데 컴퍼니가 있는 경우에는 컴퍼니 코드가 들어 온다., 
     i_deal_company_code                 in text, -- 관리를 해주는 컴퍼니코드 , 넣지 않으면 , Mylation 회사 코드가 들어가야 함.(Mylation 회사코드는 100000) 
     i_ceo_name                          in text,
+    i_business_type                     in text,
+    i_business_item                     in text,    
     i_language                          in text,
     i_time_zone                         in text,
     i_currency_code                     in text,
@@ -109,11 +111,11 @@ BEGIN
         -- 회사입력 
         insert into tbl_company_info(
             company_code, deal_company_code, company_name, business_registration_code, ceo_name,
-            create_user, create_date, modify_date, recent_user,
+            business_type, business_item, create_user, create_date, modify_date, recent_user,
             language, time_zone, currency_code, country, company_type
             ) values(
                 v_company_code, v_deal_company_code::integer, i_company_name, i_business_registration_code, i_ceo_name,
-                v_user_id, now(), now(), v_user_id,
+                i_business_type, i_business_item, v_user_id, now(), now(), v_user_id,
                 i_language, i_time_zone, i_currency_code, i_country, i_company_type
             );
     elsif (i_user_type = 'COMPANY' and i_company_code is not null) then 
