@@ -228,7 +228,7 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
     
     let v_company_code = company_code === "" ? null : company_code;
 
-    const v_deal_company_code = deal_company_code ?? '100000';
+    const v_deal_company_code = deal_company_code === "" || deal_company_code === null || deal_company_code === undefined ? '100000' : deal_company_code;
     const user_id = await pool.query(`select uuid_generate_v4() uuid`, []);
     const v_user_id = user_id.rows[0].uuid;
     let v_user_role = 'FREE_USER';  // default free_user 이고  company_type 이 들어 오면 변경
