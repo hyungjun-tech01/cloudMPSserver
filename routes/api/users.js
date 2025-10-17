@@ -54,7 +54,8 @@ router.post('/login',localcheck, async(req, res) => {
                                          WHERE user_name = $1 
                                          and company_code = $2 
                                          and user_status='COMPLETE_AUTH'
-                                         and user_type = 'COMPANY'`, [user_name,  company_code]);
+                                         and user_type = 'COMPANY'
+                                         and deleted = 'N'`, [user_name,  company_code]);
         if(!users.rows.length) 
           throw new Error('Company - Invalid userName or password');
 
@@ -225,11 +226,13 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
     const salt = bcrypt.genSaltSync(10);
     const hashPassword = bcrypt.hashSync(password, salt);
 
+    transaction = await pool.connect();
+    await transaction.query('BEGIN'); // 트랜잭션 시작
     
     let v_company_code = company_code === "" ? null : company_code;
 
     const v_deal_company_code = deal_company_code === "" || deal_company_code === null || deal_company_code === undefined ? '100000' : deal_company_code;
-    const user_id = await pool.query(`select uuid_generate_v4() uuid`, []);
+    const user_id = await transaction.query(`select uuid_generate_v4() uuid`, []);
     const v_user_id = user_id.rows[0].uuid;
     let v_user_role = 'FREE_USER';  // default free_user 이고  company_type 이 들어 오면 변경
 
@@ -240,14 +243,24 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
       throw error;
     }
 
+    if (v_deal_company_code !== '100000'){
+      const deal_company_check = await transaction.query(`select company_code from tbl_company_info where company_code = $1`, [v_deal_company_code]);
+      if (deal_company_check.rows.length === 0) {
+        const error = new Error('invalid_deal_comapny_code');
+        error.statusCode = 400; // HTTP 상태 코드 지정
+        error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
+        throw error;
+      }               
+    }
+
     if(user_type === 'COMPANY' ){
 
       // company_code  가 null  이면  company  생성 
       if(v_company_code === null ){
-        const company_code_seq = await pool.query(`select nextval('company_code_seq') company_code_seq`, []);
+        const company_code_seq = await transaction.query(`select nextval('company_code_seq') company_code_seq`, []);
         v_company_code = company_code_seq.rows[0].company_code_seq;
 
-        const create_company = await pool.query(` insert into tbl_company_info(
+        const create_company = await transaction.query(` insert into tbl_company_info(
           company_code, deal_company_code, company_name, business_registration_code,
           ceo_name, business_type, business_item, create_user, 
           create_date, modify_date, recent_user, language, 
@@ -265,11 +278,11 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
       }else{
            // company_code가 not null 이면 컴퍼니 확인 
            const company_code_check 
-              = await pool.query(`select company_code 
+              = await transaction.query(`select company_code 
                                     from tbl_company_info 
                                     where company_code = $1`, [v_company_code]);
 
-            if (company_code_check.rows.length = 0) {
+            if (company_code_check.rows.length === 0) {
               const error = new Error('invalid_comapny_code');
               error.statusCode = 400; // HTTP 상태 코드 지정
               error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
@@ -289,7 +302,7 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
       }
     }
     
-    const create_user = await pool.query(`INSERT INTO tbl_user_info (
+    const create_user = await transaction.query(`INSERT INTO tbl_user_info (
         user_id, user_name, full_name, email, 
         password, user_type, company_code, user_status, 
         terms_of_service, privacy_policy, location_information, notification_email, 
@@ -304,11 +317,11 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
         terms_of_service, privacy_policy, location_information, notification_email,
         v_user_id, v_user_role]);
 
-        const verifiction_code_seq = await pool.query(`select generate_6_verification_code() verifiction_code`, []);
+        const verifiction_code_seq = await transaction.query(`select generate_6_verification_code() verifiction_code`, []);
         // 인증 코드 생성 
         const v_verifiction_code = verifiction_code_seq.rows[0].verifiction_code;
 
-        const create_auth = await pool.query(`insert into tbl_auth_info(
+        const create_auth = await transaction.query(`insert into tbl_auth_info(
           reference_id,auth_type, verification_code, expired_date, created_date )
           values($1, 'USER_SIGN_UP',$2, now() + interval '3 hours', now() )   
         `, [v_user_id,v_verifiction_code]);
@@ -316,6 +329,8 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
   
   const x_verification_code = v_verifiction_code;
   const x_company_code = v_company_code;
+
+  await transaction.query('COMMIT');
 
   let mailOptions;
   if (user_type === 'COMPANY' ) {
@@ -371,12 +386,27 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
   res.json({ ResultCode: '0', ErrorMessage: '' , verification_code:x_verification_code, company_code:x_company_code });
 
   }catch(err){
+    // 3. 오류 발생 시 트랜잭션 롤백
+    if (transaction) {
+      try {
+          await transaction.query('ROLLBACK'); // 오류 발생 시 롤백
+          console.log(`[트랜잭션 롤백 ]:`, e_mail_adress);
+      } catch (rollbackErr) {
+          console.log(`[트랜잭션 롤백 실패]:`, rollbackErr.message);
+      }
+    }    
       console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/login'] reqBody Error:`, e_mail_adress );
       console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/login '] Error:`, err.message); 
 
       const resultCode = err.resultCode || '1';
       res.status(401).json({ ResultCode: resultCode, ErrorMessage: err.message });
-  }
+  }finally {
+    // 4. 클라이언트 연결 해제
+    if (transaction) {
+      transaction.release();
+    }
+}
+
 });
 
 
