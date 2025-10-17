@@ -275,6 +275,17 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
             v_user_id,language,
             time_zone, currency_code, country, company_type]);
 
+            if(company_type === 'PARTNER') {
+              v_user_role = 'PARTNER';
+            }else if (company_type === 'GENERAL'){
+              v_user_role = 'SUBSCRIPTION';
+            }else{
+              const error = new Error('company_type_error');
+              error.statusCode = 400; // HTTP 상태 코드 지정
+              error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
+              throw error;
+            }
+
       }else{
            // company_code가 not null 이면 컴퍼니 확인 
            const company_code_check 
@@ -287,18 +298,17 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
               error.statusCode = 400; // HTTP 상태 코드 지정
               error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
               throw error;
+            }
+            if(company_type === 'PARTNER') {
+              v_user_role = 'PARTNER_USER';
+            }else if (company_type === 'GENERAL'){
+              v_user_role = 'SUBSCRIPT_USER';
+            }else{
+              const error = new Error('company_type_error');
+              error.statusCode = 400; // HTTP 상태 코드 지정
+              error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
+              throw error;
             }                       
-      }
-
-      if(company_type === 'PARTNER') {
-        v_user_role = 'PARTNER';
-      }else if (company_type === 'GENERAL'){
-        v_user_role = 'SUBSCRIPTION';
-      }else{
-        const error = new Error('company_type_error');
-        error.statusCode = 400; // HTTP 상태 코드 지정
-        error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
-        throw error;
       }
     }
     
