@@ -105,6 +105,7 @@ router.post('/login',localcheck, async(req, res) => {
 router.post('/login_vericode',localcheck, async(req, res) => {
   const {user_name, password, verification_code, company_code, ip_address} = req.body;
 
+  console.log('login_vericode', user_name, password, verification_code);
   try{
 
       // login 시도했던 로그 생성 .
@@ -129,9 +130,10 @@ router.post('/login_vericode',localcheck, async(req, res) => {
                                                 and t2.auth_type = 'USER_SIGN_UP'
                                                 and t2.verification_code = $2
                                                 and t2.expired_date > now() 
-                                                and user_status in ('NEED_AUTH','PASSWORD_CHANGING' )`, [user_name, verification_code]);
+                                                and user_status in ('NEED_AUTH','PASSWORD_CHANGING' )
+                                                order by t2.created_date desc`, [user_name, verification_code]);
 
-      if(!users.rows.length) 
+      if(users.rows.length === 0) 
          throw new Error('Invalid userName or password or verification code');
 
        // bcrypt.compare를 사용하여 비밀번호를 비교합니다.
@@ -155,8 +157,8 @@ router.post('/login_vericode',localcheck, async(req, res) => {
 
       res.end();
   }catch(err){
-      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/login'] reqBody Error:`, user_name );
-      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/login '] Error:`, err.message); 
+      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/login_vericode'] reqBody Error:`, user_name );
+      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/login_vericode'] Error:`, err.message); 
 
       res.status(401).json({ ResultCode: '1', ErrorMessage: err.message });
       res.end();
@@ -224,19 +226,25 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
   try{
 
     const salt = bcrypt.genSaltSync(10);
-    const hashPassword = bcrypt.hashSync(password, salt);
+    let v_password = password === "" || password === null || password === undefined ? '' : password;
+    let v_user_type = user_type;
+    let hashPassword = bcrypt.hashSync(v_password, salt);
 
     transaction = await pool.connect();
+
     await transaction.query('BEGIN'); // 트랜잭션 시작
     
     let v_company_code = company_code === "" ? null : company_code;
+    let v_verifiction_code;
+    let is_exist_user = false;
+    let temp_password = '';
 
     const v_deal_company_code = deal_company_code === "" || deal_company_code === null || deal_company_code === undefined ? '100000' : deal_company_code;
     const user_id = await transaction.query(`select uuid_generate_v4() uuid`, []);
-    const v_user_id = user_id.rows[0].uuid;
+    let v_user_id = user_id.rows[0].uuid;
     let v_user_role = 'FREE_USER';  // default free_user 이고  company_type 이 들어 오면 변경
 
-    if(user_type !== 'COMPANY' && user_type !== 'PERSON') {
+    if(v_user_type !== 'COMPANY' && v_user_type !== 'PERSON') {
       const error = new Error('user_type_error');
       error.statusCode = 400;
       error.resultCode = '3';
@@ -253,136 +261,224 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
       }               
     }
 
-    if(user_type === 'COMPANY' ){
+    // 이미 사용자 데이터가  있으면, 
+    // status = 'NEED_AUTH' , deleted='N', delete_date = null 하고 인증코드 발행, 메일 보내기 
+    const user_check = await transaction.query(`select user_id, user_name, company_code, user_type from tbl_user_info where user_name = $1`, [e_mail_adress]);
+    if (user_check.rows.length !== 0) {
 
-      // company_code  가 null  이면  company  생성 
-      if(v_company_code === null ){
-        const company_code_seq = await transaction.query(`select nextval('company_code_seq') company_code_seq`, []);
-        v_company_code = company_code_seq.rows[0].company_code_seq;
+      const temp_pass = await transaction.query(`select generate_9_password() temp_password`, []);
+      temp_password = temp_pass.rows[0].temp_password;
+      v_user_id = user_check.rows[0].user_id;
+      const hashed_temp_password =  bcrypt.hashSync(temp_password, salt);
 
-        const create_company = await transaction.query(` insert into tbl_company_info(
-          company_code, deal_company_code, company_name, business_registration_code,
-          ceo_name, business_type, business_item, create_user, 
-          create_date, modify_date, recent_user, language, 
-          time_zone, currency_code, country, company_type
-          ) values(
-              $1, $2, $3, $4, 
-              $5, $6, $7, $8, 
-              now(), now(), $9, $10,
-              $11, $12, $13, $14
-          )`, [v_company_code,v_deal_company_code, company_name, business_registration_code,
-            ceo_name, business_type, business_item, v_user_id,
-            v_user_id,language,
-            time_zone, currency_code, country, company_type]);
+      const update_user = await transaction.query(`
+        update tbl_user_info
+        set user_status = 'NEED_AUTH', deleted='N', deleted_date=null, password = $2
+        where user_name = $1
+      `, [e_mail_adress, hashed_temp_password]);
 
-            if(company_type === 'PARTNER') {
-              v_user_role = 'PARTNER';
-            }else if (company_type === 'GENERAL'){
-              v_user_role = 'SUBSCRIPTION';
-            }else{
-              const error = new Error('company_type_error');
-              error.statusCode = 400; // HTTP 상태 코드 지정
-              error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
-              throw error;
-            }
+      const verifiction_code_seq = await transaction.query(`select generate_6_verification_code() verifiction_code`, []);
+      // 인증 코드 생성 
+      v_verifiction_code = verifiction_code_seq.rows[0].verifiction_code;
 
-      }else{
-           // company_code가 not null 이면 컴퍼니 확인 
-           const company_code_check 
-              = await transaction.query(`select company_code 
-                                    from tbl_company_info 
-                                    where company_code = $1`, [v_company_code]);
+      const create_auth = await transaction.query(`insert into tbl_auth_info(
+        reference_id,auth_type, verification_code, expired_date, created_date )
+        values($1, 'USER_SIGN_UP',$2, now() + interval '3 hours', now() )   
+      `, [v_user_id,v_verifiction_code]);
 
-            if (company_code_check.rows.length === 0) {
-              const error = new Error('invalid_comapny_code');
-              error.statusCode = 400; // HTTP 상태 코드 지정
-              error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
-              throw error;
-            }
-            if(company_type === 'PARTNER') {
-              v_user_role = 'PARTNER_USER';
-            }else if (company_type === 'GENERAL'){
-              v_user_role = 'SUBSCRIPT_USER';
-            }else{
-              const error = new Error('company_type_error');
-              error.statusCode = 400; // HTTP 상태 코드 지정
-              error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
-              throw error;
-            }                       
+      is_exist_user = true;
+      v_company_code = user_check.rows[0].company_code;
+      v_user_type = user_check.rows[0].user_type;
+
+    // 사용자 데이터가 없으면,  신규 사용자일때 .
+    }else{
+
+      if(v_user_type === 'COMPANY' ){
+
+        // company_code  가 null  이면  company  생성 
+        if(v_company_code === null ){
+          const company_code_seq = await transaction.query(`select nextval('company_code_seq') company_code_seq`, []);
+          v_company_code = company_code_seq.rows[0].company_code_seq;
+
+          const create_company = await transaction.query(` insert into tbl_company_info(
+            company_code, deal_company_code, company_name, business_registration_code,
+            ceo_name, business_type, business_item, create_user, 
+            create_date, modify_date, recent_user, language, 
+            time_zone, currency_code, country, company_type
+            ) values(
+                $1, $2, $3, $4, 
+                $5, $6, $7, $8, 
+                now(), now(), $9, $10,
+                $11, $12, $13, $14
+            )`, [v_company_code,v_deal_company_code, company_name, business_registration_code,
+              ceo_name, business_type, business_item, v_user_id,
+              v_user_id,language,
+              time_zone, currency_code, country, company_type]);
+
+              if(company_type === 'PARTNER') {
+                v_user_role = 'PARTNER';
+              }else if (company_type === 'GENERAL'){
+                v_user_role = 'SUBSCRIPTION';
+              }else{
+                const error = new Error('company_type_error');
+                error.statusCode = 400; // HTTP 상태 코드 지정
+                error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
+                throw error;
+              }
+
+        }else{
+            // company_code가 not null 이면 컴퍼니 확인 
+            const company_code_check 
+                = await transaction.query(`select company_code 
+                                      from tbl_company_info 
+                                      where company_code = $1`, [v_company_code]);
+
+              if (company_code_check.rows.length === 0) {
+                const error = new Error('invalid_comapny_code');
+                error.statusCode = 400; // HTTP 상태 코드 지정
+                error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
+                throw error;
+              }
+              if(company_type === 'PARTNER') {
+                v_user_role = 'PARTNER_USER';
+              }else if (company_type === 'GENERAL'){
+                v_user_role = 'SUBSCRIPT_USER';
+              }else{
+                const error = new Error('company_type_error');
+                error.statusCode = 400; // HTTP 상태 코드 지정
+                error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
+                throw error;
+              }                       
+        }
+        //비밀번호가 없다면. 임시 비번 생성하여 사용자 생성
+        if (v_password === ''){
+          const temp_pass = await transaction.query(`select generate_9_password() temp_password`, []);
+          temp_password = temp_pass.rows[0].temp_password;
+          hashPassword =  bcrypt.hashSync(temp_password, salt);
+        }
       }
-    }
-    
-    const create_user = await transaction.query(`INSERT INTO tbl_user_info (
-        user_id, user_name, full_name, email, 
-        password, user_type, company_code, user_status, 
-        terms_of_service, privacy_policy, location_information, notification_email, 
-        created_date, created_by, user_role
-      ) VALUES (
-        $1, $2, $3, $4, 
-        $5, $6, $7, 'NEED_AUTH', 
-        $8, $9, $10, $11, 
-        now(), $12, $13
-      )`, [v_user_id,e_mail_adress, full_name, e_mail_adress,
-        hashPassword, user_type, v_company_code, 
-        terms_of_service, privacy_policy, location_information, notification_email,
-        v_user_id, v_user_role]);
 
-        const verifiction_code_seq = await transaction.query(`select generate_6_verification_code() verifiction_code`, []);
+      const create_user = await transaction.query(`INSERT INTO tbl_user_info (
+          user_id, user_name, full_name, email, 
+          password, user_type, company_code, user_status, 
+          terms_of_service, privacy_policy, location_information, notification_email, 
+          created_date, created_by, user_role
+        ) VALUES (
+          $1, $2, $3, $4, 
+          $5, $6, $7, 'NEED_AUTH', 
+          $8, $9, $10, $11, 
+          now(), $12, $13
+        )`, [v_user_id,e_mail_adress, full_name, e_mail_adress,
+          hashPassword, user_type, v_company_code, 
+          terms_of_service, privacy_policy, location_information, notification_email,
+          v_user_id, v_user_role]);
+
+      const verifiction_code_seq = await transaction.query(`select generate_6_verification_code() verifiction_code`, []);
         // 인증 코드 생성 
-        const v_verifiction_code = verifiction_code_seq.rows[0].verifiction_code;
+        v_verifiction_code = verifiction_code_seq.rows[0].verifiction_code;
 
-        const create_auth = await transaction.query(`insert into tbl_auth_info(
+      const create_auth = await transaction.query(`insert into tbl_auth_info(
           reference_id,auth_type, verification_code, expired_date, created_date )
           values($1, 'USER_SIGN_UP',$2, now() + interval '3 hours', now() )   
         `, [v_user_id,v_verifiction_code]);
        
-  
+    }
   const x_verification_code = v_verifiction_code;
   const x_company_code = v_company_code;
 
   await transaction.query('COMMIT');
 
   let mailOptions;
-  if (user_type === 'COMPANY' ) {
-  // 4-1. 이메일 전송 내용 
-    mailOptions = {
-    from: process.env.SENDER_EMAIL,
-    to: e_mail_adress, // 사용자 이메일 주소
-    subject: ' 마일레이션 클라우드MPS 회원 가입의 인증코드입니다.',
-    html: `
-        <h1>회원가입을 환영합니다!</h1>
-        <p>안녕하세요,   ${company_name} 기업 고객,  ${full_name} 님 </p>
-        <p>마일레이션 클라우드 MPS 의 계정은 ${e_mail_adress}이고 </p>
-        <p>회사코드는  ${x_company_code} </p>
-        <p>아래 6자리 인증 코드를 입력하여 회원가입을 완료해 주세요.</p>
-        <h2 style="color: #4CAF50;">인증 코드: ${x_verification_code}</h2>
-        <p>이 코드는 3시간 동안 유효합니다.</p>
-        <p></p>
-        <p>아래 사이트에서 회원 가입을 마무리 하여 주십시요. </P>
-        <p><a href="${process.env.CLIENT_HOST}/login?userType=company&init=true">[회원가입 마무리 하러 가기]</a></p>
-        <p>감사합니다.</p>
-    `
-  };
- }else{
-  // 4-1. 이메일 전송 내용 
-   mailOptions = {
-    from: process.env.SENDER_EMAIL,
-    to: e_mail_adress, // 사용자 이메일 주소
-    subject: ' 마일레이션 클라우드MPS 회원 가입의 인증코드입니다.',
-    html: `
-        <h1>회원가입을 환영합니다!</h1>
-        <p>안녕하세요,    ${full_name} 님 </p>
-        <p>마일레이션 클라우드 MPS 의 계정은 ${e_mail_adress}이고 </p>
-        <p>아래 6자리 인증 코드를 입력하여 회원가입을 완료해 주세요.</p>
-        <h2 style="color: #4CAF50;">인증 코드: ${x_verification_code}</h2>
-        <p>이 코드는 3시간 동안 유효합니다.</p>
-        <p></p>
-        <p>아래 사이트에서 회원 가입을 마무리 하여 주십시요. </P>
-        <p><a href="${process.env.CLIENT_HOST}/login?userType=person&init=true">[회원가입 마무리 하러 가기]</a></p>
-        <p>감사합니다.</p>
-    `
-  };
- }
+
+  if(is_exist_user){
+    if (v_user_type === 'COMPANY' ) {
+      // 4-1. 이메일 전송 내용 
+      mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: e_mail_adress, // 사용자 이메일 주소
+        subject: 'MPS클라우드에 사용자가 이미 있습니다. 패스워드 변경 인증코드입니다.',
+        html: `
+            <p>안녕하세요,   ${company_name} 기업 고객,  ${full_name} 님 </p>
+            <p>마일레이션 클라우드 MPS 의 계정은 ${e_mail_adress}이고 </p>
+            <p>회사코드는  ${x_company_code} 입니다.  </p>
+            <p>아래 6자리 인증 코드와 임시 비밀번호를 입력하여 로그인을 완료해 주세요.</p>
+            <h2 style="color: #4CAF50;">인증 코드: ${x_verification_code}</h2>
+            <h2 style="color: #4CAF50;">임시비밀번호: ${temp_password}</h2>
+            <p>이 코드는 3시간 동안 유효합니다.</p>
+            <p></p>
+            <p>아래 사이트에서 비밀번호 변경 및 로그인을 마무리 하여 주십시요. </P>
+            <p><a href="${process.env.CLIENT_HOST}/login?userType=company&init=true">[비밀번호 변경 및 로그인 하러 가기]</a></p>
+            <p>감사합니다.</p>
+        `
+      };
+    }else{
+        // 4-1. 이메일 전송 내용 
+      mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: e_mail_adress, // 사용자 이메일 주소
+        subject: 'MPS클라우드에 사용자가 이미 있습니다. 패스워드 변경 인증코드입니다',
+        html: `
+            <p>안녕하세요,    ${full_name} 님 </p>
+            <p>마일레이션 클라우드 MPS 의 계정은 ${e_mail_adress}입니다. </p>
+            <p>아래 6자리 인증 코드와 임시 비밀번호를 입력하여 로그인을 완료해 주세요.</p>
+            <h2 style="color: #4CAF50;">인증 코드: ${x_verification_code}</h2>
+            <h2 style="color: #4CAF50;">임시비밀번호: ${temp_password}</h2>
+            <p>이 코드는 3시간 동안 유효합니다.</p>
+            <p></p>
+            <p>아래 사이트에서 비밀번호 변경 및 로그인을 마무리 하여 주십시요. </P>
+            <p><a href="${process.env.CLIENT_HOST}/login?userType=person&init=true">[비밀번호 변경 및 로그인 하러 가기]</a></p>
+            <p>감사합니다.</p>
+        `
+      };
+    }
+  }else{
+    if (v_user_type === 'COMPANY' ) {
+
+      const tempPasswordHtml = temp_password !== '' 
+      ? `<h2 style="color: #4CAF50;">임시비밀번호: ${temp_password}</h2>` 
+      : '';
+
+      // 4-1. 이메일 전송 내용 
+        mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: e_mail_adress, // 사용자 이메일 주소
+        subject: ' 마일레이션 클라우드MPS 회원 가입의 인증코드입니다.',
+        html: `
+            <h1>회원가입을 환영합니다!</h1>
+            <p>안녕하세요,   ${company_name} 기업 고객,  ${full_name} 님 </p>
+            <p>마일레이션 클라우드 MPS 의 계정은 ${e_mail_adress}이고 </p>
+            <p>회사코드는  ${x_company_code} </p>
+            <p>아래 6자리 인증 코드를 입력하여 회원가입을 완료해 주세요.</p>
+            <h2 style="color: #4CAF50;">인증 코드: ${x_verification_code}</h2>
+            ${tempPasswordHtml}
+            <p>이 코드는 3시간 동안 유효합니다.</p>
+            <p></p>
+            <p>아래 사이트에서 회원 가입을 마무리 하여 주십시요. </P>
+            <p><a href="${process.env.CLIENT_HOST}/login?userType=company&init=true">[회원가입 마무리 하러 가기]</a></p>
+            <p>감사합니다.</p>
+        `
+        };
+    }else{
+      // 4-1. 이메일 전송 내용 
+      mailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: e_mail_adress, // 사용자 이메일 주소
+        subject: ' 마일레이션 클라우드MPS 회원 가입의 인증코드입니다.',
+        html: `
+            <h1>회원가입을 환영합니다!</h1>
+            <p>안녕하세요,    ${full_name} 님 </p>
+            <p>마일레이션 클라우드 MPS 의 계정은 ${e_mail_adress}이고 </p>
+            <p>아래 6자리 인증 코드를 입력하여 회원가입을 완료해 주세요.</p>
+            <h2 style="color: #4CAF50;">인증 코드: ${x_verification_code}</h2>
+            <p>이 코드는 3시간 동안 유효합니다.</p>
+            <p></p>
+            <p>아래 사이트에서 회원 가입을 마무리 하여 주십시요. </P>
+            <p><a href="${process.env.CLIENT_HOST}/login?userType=person&init=true">[회원가입 마무리 하러 가기]</a></p>
+            <p>감사합니다.</p>
+        `
+        };
+    }
+  }
 
   // 메일 전송
   try {
@@ -393,7 +489,10 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
     // 메일 실패해도 회원가입 절차는 성공으로 처리
   }
 
-  res.json({ ResultCode: '0', ErrorMessage: '' , verification_code:x_verification_code, company_code:x_company_code });
+  if (is_exist_user)
+    res.json({ ResultCode: '0', ErrorMessage: 'exist_user' , verification_code:x_verification_code, company_code:x_company_code });
+  else
+    res.json({ ResultCode: '0', ErrorMessage: '' , verification_code:x_verification_code, company_code:x_company_code });
 
   }catch(err){
     // 3. 오류 발생 시 트랜잭션 롤백
@@ -405,8 +504,8 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
           console.log(`[트랜잭션 롤백 실패]:`, rollbackErr.message);
       }
     }    
-      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/login'] reqBody Error:`, e_mail_adress );
-      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/login '] Error:`, err.message); 
+      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/signup_request'] reqBody Error:`, e_mail_adress );
+      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/signup_request'] Error:`, err.message); 
 
       const resultCode = err.resultCode || '1';
       res.status(401).json({ ResultCode: resultCode, ErrorMessage: err.message });

@@ -1,4 +1,6 @@
 -- 2025.09.28 6자리 난수 생성 로직
+drop procedure generate_6_verification_code;
+
 CREATE OR REPLACE FUNCTION generate_6_verification_code()
 RETURNS TEXT AS $$
 DECLARE
@@ -27,6 +29,34 @@ $$ language plpgsql;
 -- check 
 select generate_6_verification_code();
 
+
+-- 2025.10.17 9자리 비밀번호 생성 로직
+CREATE OR REPLACE FUNCTION generate_9_password()
+RETURNS TEXT AS $$
+DECLARE
+    -- 숫자 (0-9), 알파벳 대문자 (A-Z), 알파벳 소문자 (a-z)를 포함하는 문자셋
+    char_set CONSTANT TEXT := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$^&()_+=-.,{}[]<>:;';
+    code_length CONSTANT INTEGER := 9;
+    random_code TEXT := '';
+    i INTEGER;
+    char_set_length INTEGER;
+BEGIN
+    -- 문자셋의 총 길이를 계산합니다.
+    char_set_length := LENGTH(char_set);
+
+    -- 코드 길이(6)만큼 반복합니다.
+    FOR i IN 1..code_length LOOP
+        -- 1. RANDOM()으로 0과 문자셋 길이 사이의 난수를 생성합니다.
+        -- 2. FLOOR()와 + 1을 적용하여 1부터 문자셋 길이까지의 인덱스를 얻습니다.
+        -- 3. SUBSTR()로 해당 인덱스의 문자를 가져와 코드에 추가합니다.
+        random_code := random_code || SUBSTR(char_set, (FLOOR(RANDOM() * char_set_length) + 1)::INTEGER, 1);
+    END LOOP;
+
+    RETURN random_code;
+END;
+$$ language plpgsql;
+
+select generate_9_password();
 
 drop procedure IF EXISTS signup_request ;
 
