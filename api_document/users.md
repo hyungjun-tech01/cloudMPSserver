@@ -759,3 +759,135 @@ curl -X POST http://localhost:38005/api/users/modify \
   "ErrorMessage": "old_password_missmatch"
 }
 ```
+
+# 8. 비밀번호 분실 API
+
+## 개요
+사용자가 비밀번호를 분실했을 때 임시 비밀번호를 생성하고,  
+6자리 인증 코드를 포함한 안내 메일을 발송하는 API입니다.  
+
+이메일 주소와 이름을 입력하면  
+임시 비밀번호와 인증 코드가 해당 이메일로 전송됩니다.  
+응답으로는 사용자 유형(`user_type`)이 함께 반환됩니다.  
+
+---
+
+## Endpoint
+- **POST** `/api/users/forgot_pass`
+
+---
+
+## Request
+
+### Headers
+| Key           | Value               | 필수 여부 | 설명               |
+|----------------|---------------------|------------|--------------------|
+| Content-Type   | application/json    | ✅         | 요청 데이터 타입   |
+
+### Body Parameters
+| 필드명          | 타입     | 필수 | 설명                                           |
+|-----------------|----------|------|------------------------------------------------|
+| e_mail_address  | string   | ✅   | 비밀번호를 분실한 사용자의 이메일 (user_name) |
+| full_name       | string   | ✅   | 비밀번호를 분실한 사용자의 이름               |
+
+### Example (Request)
+```json
+{
+  "e_mail_address": "user@company.com",
+  "full_name": "홍길동"
+}
+
+## Response
+
+### ✅ Success (200 OK)  
+임시 비밀번호와 인증 코드가 이메일로 전송되며, 사용자 유형(`user_type`)을 반환합니다.
+
+```json
+{
+  "ResultCode": "0",
+  "ErrorMessage": "",
+  "user_type": "COMPANY"
+}
+```
+
+---
+
+### 🔴 Failure (401 Unauthorized)
+
+#### 1. 이메일 주소가 비어있는 경우
+```json
+{
+  "ResultCode": "2",
+  "ErrorMessage": "e_mail_address_is_not_null"
+}
+```
+
+#### 2. 이름이 비어있는 경우
+```json
+{
+  "ResultCode": "3",
+  "ErrorMessage": "full_name_is_not_null"
+}
+```
+
+#### 3. 해당 이메일의 사용자가 존재하지 않는 경우
+```json
+{
+  "ResultCode": "4",
+  "ErrorMessage": "no_user"
+}
+```
+
+#### 4. 기타 서버 오류
+```json
+{
+  "ResultCode": "1",
+  "ErrorMessage": "Internal Server Error"
+}
+```
+
+---
+
+## 동작 흐름(간단)
+1. `e_mail_address`, `full_name` 검증 (빈값 체크).  
+2. 사용자 존재 여부 확인 (`tbl_user_info` 조회).  
+3. 임시 비밀번호 생성 및 해시 저장 (`password` 변경, `user_status` = 'NEED_AUTH').  
+4. 6자리 인증 코드 생성하여 `tbl_auth_info`에 저장(유효기간 3시간).  
+5. 사용자 이메일로 인증 코드 + 임시 비밀번호 전송.  
+6. 성공 응답: `ResultCode: "0"`, `user_type` 반환.  
+   실패 시 적절한 `ResultCode`와 `ErrorMessage` 반환.
+
+---
+
+## 이메일 템플릿 예시
+
+### 기업 사용자 (`user_type = COMPANY`)
+```
+안녕하세요, [회사명] 기업 고객 [홍길동] 님
+
+마일레이션 클라우드 MPS 의 계정은 user@company.com 이고
+회사 코드는 [company_code] 입니다.
+
+아래 6자리 인증 코드와 임시 비밀번호를 입력하여 로그인을 완료해 주세요.
+인증 코드: 123456
+임시 비밀번호: Abc123xyz
+
+이 코드는 3시간 동안 유효합니다.
+[비밀번호 변경 및 로그인 하러 가기]
+https://client-host/login?userType=company&init=true
+```
+
+### 개인 사용자 (`user_type = PERSON`)
+```
+안녕하세요, [홍길동] 님
+
+마일레이션 클라우드 MPS 의 계정은 user@company.com 입니다.
+
+아래 6자리 인증 코드와 임시 비밀번호를 입력하여 로그인을 완료해 주세요.
+인증 코드: 654321
+임시 비밀번호: Xyz789abc
+
+이 코드는 3시간 동안 유효합니다.
+[비밀번호 변경 및 로그인 하러 가기]
+https://client-host/login?userType=person&init=true
+```

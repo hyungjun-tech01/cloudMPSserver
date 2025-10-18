@@ -810,6 +810,145 @@ router.post('/change_pass',localcheck, authMiddleware, async(req, res) => {
     }
 });
 
+// 패스워드 잊어버렸을 시, 패스워드 초기화하고 인증코드 매일로 발송 , return은  user_type도 함꼐
+router.post('/forgot_pass',localcheck, async(req, res) => {
+  const {
+    e_mail_address,       // 패스워드 변경 필요한, e_mail (user_name)
+    full_name     // 패스워드 변경 필요한사람의 full_name
+    } = req.body;  
+
+    try{
+
+      if(e_mail_address === "" || e_mail_address === null || e_mail_address === undefined){
+
+        const error = new Error('e_mail_address_is_not_null');
+        error.statusCode = 400; // HTTP 상태 코드 지정
+        error.resultCode = '2'; // 사용자 정의 ResultCode 지정 (옵션)
+        throw error;
+
+      }
+
+      if(full_name === "" || full_name === null || full_name === undefined){
+
+        const error = new Error('full_name_is_not_null');
+        error.statusCode = 400; // HTTP 상태 코드 지정
+        error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
+        throw error;
+
+      }
+
+      const check_user  = await pool.query(`select user_type, user_id, company_code
+        from tbl_user_info tbi
+        where tbi.user_name = $1 `,[e_mail_address]);
+
+      if(check_user.rows.length === 0){
+        const error = new Error('no_user');
+        error.statusCode = 400; // HTTP 상태 코드 지정
+        error.resultCode = '4'; // 사용자 정의 ResultCode 지정 (옵션)
+        throw error;        
+      }  
+
+
+      const v_modified_by = check_user.rows[0].user_id;  // 작업자 user_id
+      const v_user_type = check_user.rows[0].user_type;
+      const v_company_code =  check_user.rows[0].company_code;
+
+
+      const salt = bcrypt.genSaltSync(10);
+      const temp_pass = await pool.query(`select generate_9_password() temp_password`, []);
+      const temp_password = temp_pass.rows[0].temp_password;
+      const v_user_id = check_user.rows[0].user_id;
+      const hashed_temp_password =  bcrypt.hashSync(temp_password, salt);
+
+      const updateUser = await pool.query(`
+      update tbl_user_info
+      set password                   = $2,
+          user_status                = 'NEED_AUTH',
+          modified_by                = $3,
+          modified_date              = now()
+        where user_id = $1` ,
+      [v_user_id              
+        ,hashed_temp_password
+        ,v_modified_by
+      ]);
+
+      const verifiction_code_seq = await pool.query(`select generate_6_verification_code() verifiction_code`, []);
+      // 인증 코드 생성 
+      const v_verifiction_code = verifiction_code_seq.rows[0].verifiction_code;
+
+      const create_auth = await pool.query(`insert into tbl_auth_info(
+        reference_id,auth_type, verification_code, expired_date, created_date )
+        values($1, 'USER_SIGN_UP',$2, now() + interval '3 hours', now() )   
+      `, [v_user_id,v_verifiction_code]);
+
+      if (v_user_type === 'COMPANY' ) {
+
+        const company  = await pool.query(`select company_name
+        from tbl_company_info tbi
+        where tbi.company_code = $1 `,[v_company_code]);
+
+        const v_company_name =  company.rows[0].company_name;
+
+        // 4-1. 이메일 전송 내용 
+        mailOptions = {
+          from: process.env.SENDER_EMAIL,
+          to: e_mail_address, // 사용자 이메일 주소
+          subject: 'MPS클라우드 패스워드 변경 인증코드입니다.',
+          html: `
+              <p>안녕하세요,   ${v_company_name} 기업 고객,  ${full_name} 님 </p>
+              <p>마일레이션 클라우드 MPS 의 계정은 ${e_mail_address}이고 </p>
+              <p>회사코드는  ${v_company_code} 입니다.  </p>
+              <p>아래 6자리 인증 코드와 임시 비밀번호를 입력하여 로그인을 완료해 주세요.</p>
+              <h2 style="color: #4CAF50;">인증 코드: ${v_verifiction_code}</h2>
+              <h2 style="color: #4CAF50;">임시비밀번호: ${temp_password}</h2>
+              <p>이 코드는 3시간 동안 유효합니다.</p>
+              <p></p>
+              <p>아래 사이트에서 비밀번호 변경 및 로그인을 마무리 하여 주십시요. </P>
+              <p><a href="${process.env.CLIENT_HOST}/login?userType=company&init=true">[비밀번호 변경 및 로그인 하러 가기]</a></p>
+              <p>감사합니다.</p>
+          `
+        };
+      }else{
+          // 4-1. 이메일 전송 내용 
+        mailOptions = {
+          from: process.env.SENDER_EMAIL,
+          to: e_mail_address, // 사용자 이메일 주소
+          subject: 'MPS클라우드 패스워드 변경 인증코드입니다. 패스워드 변경 인증코드입니다',
+          html: `
+              <p>안녕하세요,    ${full_name} 님 </p>
+              <p>마일레이션 클라우드 MPS 의 계정은 ${e_mail_address}입니다. </p>
+              <p>아래 6자리 인증 코드와 임시 비밀번호를 입력하여 로그인을 완료해 주세요.</p>
+              <h2 style="color: #4CAF50;">인증 코드: ${v_verifiction_code}</h2>
+              <h2 style="color: #4CAF50;">임시비밀번호: ${temp_password}</h2>
+              <p>이 코드는 3시간 동안 유효합니다.</p>
+              <p></p>
+              <p>아래 사이트에서 비밀번호 변경 및 로그인을 마무리 하여 주십시요. </P>
+              <p><a href="${process.env.CLIENT_HOST}/login?userType=person&init=true">[비밀번호 변경 및 로그인 하러 가기]</a></p>
+              <p>감사합니다.</p>
+          `
+        };
+      }
+
+      
+      // 메일 전송
+      try {
+        await transporter.sendMail(mailOptions);
+        console.log(`[메일 전송 성공] → ${e_mail_address}`);
+      } catch (mailErr) {
+        console.error(`[메일 전송 실패] ${e_mail_address}:`, mailErr.message);
+        // 메일 실패해도 회원가입 절차는 성공으로 처리
+      }
+     
+      res.json({ ResultCode: '0', ErrorMessage: '', user_type:v_user_type });
+
+    }catch(err){
+        console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/change_pass'] reqBody Error:`, e_mail_address );
+        console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/change_pass '] Error:`, err.message); 
+        const resultCode = err.resultCode || '1';
+        res.status(401).json({ ResultCode: resultCode, ErrorMessage: err.message });
+    }
+});
+
 
 
 // 모듈로 내보내기
