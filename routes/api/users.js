@@ -35,7 +35,7 @@ const transporter = nodemailer.createTransport({
 // login : host:port번호/api/users/login 
 router.post('/login',localcheck, async(req, res) => {
   const {user_name, password, company_code, ip_address} = req.body;
-  console.log('try login');
+ 
   try{
 
       // login 시도했던 로그 생성 .
@@ -105,7 +105,6 @@ router.post('/login',localcheck, async(req, res) => {
 router.post('/login_vericode',localcheck, async(req, res) => {
   const {user_name, password, verification_code, company_code, ip_address} = req.body;
 
-  console.log('login_vericode', user_name, password, verification_code);
   try{
 
       // login 시도했던 로그 생성 .
@@ -569,9 +568,6 @@ router.post('/getuserlist', localcheck, authMiddleware, async(req, res) => {
       res.end();
   }
 });
-// 패스워드 변경 
-router.post('/change_pass',localcheck, authMiddleware, async(req, res) => {
-});
 
 // 내정보 수정 
 router.post('/modify',localcheck, authMiddleware, async(req, res) => {
@@ -741,6 +737,80 @@ router.post('/modify',localcheck, authMiddleware, async(req, res) => {
         res.status(401).json({ ResultCode: resultCode, ErrorMessage: err.message });
     }
 });
+
+// 패스워드 변경 
+router.post('/change_pass',localcheck, authMiddleware, async(req, res) => {
+  const {
+    user_id,       // 수정하려는 사용자의 user_id
+    user_name,     // 수정 작업을 하는 사람의 user_name
+    old_password,
+    new_password
+    } = req.body;  
+
+    try{
+
+      if(new_password === "" || new_password === null || new_password === undefined){
+
+        const error = new Error('new_password_is_not_null');
+        error.statusCode = 400; // HTTP 상태 코드 지정
+        error.resultCode = '2'; // 사용자 정의 ResultCode 지정 (옵션)
+        throw error;
+
+      }
+
+      const check_old_password  = await pool.query(`select password
+        from tbl_user_info tbi
+        where tbi.user_id = $1 and tbi.user_status = 'COMPLETE_AUTH'`,[user_id]);
+
+      if(check_old_password.rows.length === 0){
+        const error = new Error('no_auth_user');
+        error.statusCode = 400; // HTTP 상태 코드 지정
+        error.resultCode = '4'; // 사용자 정의 ResultCode 지정 (옵션)
+        throw error;        
+      }  
+
+      // bcrypt.compare를 사용하여 비밀번호를 비교합니다.
+      const hashedPassword = check_old_password.rows[0].password;
+      const passwordMatch = await bcrypt.compare(old_password, hashedPassword);  
+
+      if (!passwordMatch) {
+        const error = new Error('old_password_missmatch');
+        error.statusCode = 400; // HTTP 상태 코드 지정
+        error.resultCode = '3'; // 사용자 정의 ResultCode 지정 (옵션)
+        throw error;
+      }
+
+      const modified_by = await pool.query(`select user_id
+        from tbl_user_info tbi
+        where tbi.user_name = $1`,[user_name]);
+
+      const v_modified_by = modified_by.rows[0].user_id;  // 작업자 user_id
+
+      const salt = bcrypt.genSaltSync(10);
+      let hashPassword = bcrypt.hashSync(new_password, salt);
+
+      const updateUser = await pool.query(`
+      update tbl_user_info
+      set password                   = $2,
+          modified_by                = $3,
+          modified_date              = now()
+        where user_id = $1` ,
+      [user_id              
+        ,hashPassword
+        ,v_modified_by
+    ]);
+     
+    res.json({ ResultCode: '0', ErrorMessage: '' });
+
+    }catch(err){
+        console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/change_pass'] reqBody Error:`, user_id );
+        console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/change_pass '] Error:`, err.message); 
+        const resultCode = err.resultCode || '1';
+        res.status(401).json({ ResultCode: resultCode, ErrorMessage: err.message });
+    }
+});
+
+
 
 // 모듈로 내보내기
 module.exports = router;

@@ -9,6 +9,7 @@
 | 2025-09-30   | zagan kim | 로그인 API 에 회사코드 추가 |
 | 2025-10-03   | zagan kim | 로그인 API return 에 user_role 추가, 회언가입 요청 API애 company_type 추가 |
 | 2025-10-03   | zagan kim | 사용자 목록 조회 API |
+| 2025-10-18   | zagan kim | 사용자 정보 수정 API, 비밀번호 변경 API 추가 |
 
 ## 목차
 1. [로그인 API](#1-로그인-api)
@@ -16,6 +17,8 @@
 3. [회원가입 요청 API](#3-회원가입-요청-api)
 4. [로그인 (Verification Code 인증) API](#4-로그인-verification-code-인증-api)
 5. [사용자 목록 조회 API](#5-사용자-목록-조회-api)
+6. [사용자 정보 수정 API](#6-사용자-정보-수정-api)
+7. [비밀번호 변경 API](#7-비밀번호-변경-api)
 
 # 1. 로그인 API
 
@@ -564,3 +567,195 @@ curl -X POST http://localhost:38005/api/users/getuserlist   -H "Content-Type: ap
 ```
 
 ---
+
+# 6. 사용자 정보 수정 API
+
+## 개요
+사용자의 기본 정보를 수정하는 API입니다.  
+**주의**: `user_id`, `user_name`, `email`, `password`는 변경할 수 없습니다.
+
+---
+
+## Endpoint
+- **POST** `/api/users/modify`
+
+---
+
+## Request
+
+### Headers
+| Key             | Value                  | 필수 여부 | 설명             |
+|-----------------|------------------------|-----------|------------------|
+| Content-Type    | application/json        | ✅        | 요청 데이터 타입 |
+| session_token   | 발급받은 JWT 토큰 값    | ✅        | 로그인 시 발급된 토큰 |
+
+### Body Parameters
+| 필드명                    | 타입    | 필수 | 설명                                    |
+|---------------------------|---------|------|-----------------------------------------|
+| user_id                   | string  | ✅   | 수정할 사용자의 UUID                     |
+| external_user_name        | string  | ❌   | 외부 사용자명                           |
+| full_name                 | string  | ❌   | 사용자 전체 이름                        |
+| notes                     | string  | ❌   | 메모                                    |
+| total_jobs                | integer | ❌   | 총 작업 수                              |
+| total_pages               | integer | ❌   | 총 페이지 수                            |
+| reset_by                  | string  | ❌   | 리셋한 사용자                           |
+| reset_date                | string  | ❌   | 리셋 날짜 (YYYY.MM.DD HH:mm:ss 형식)    |
+| schedule_period           | string  | ❌   | 스케줄 주기                             |
+| schedule_amount           | number  | ❌   | 스케줄 금액                             |
+| schedule_start            | integer | ❌   | 스케줄 시작                             |
+| deleted                   | string  | ❌   | 삭제 여부 (Y/N)                         |
+| deleted_date              | string  | ❌   | 삭제 날짜 (YYYY.MM.DD HH:mm:ss 형식)    |
+| user_source_type          | string  | ❌   | 사용자 소스 타입                        |
+| department                | string  | ❌   | 부서                                    |
+| office                    | string  | ❌   | 사무실                                  |
+| card_number               | string  | ❌   | 카드 번호                               |
+| card_number2              | string  | ❌   | 카드 번호2                              |
+| disabled_printing         | string  | ❌   | 인쇄 비활성화 여부 (Y/N)                |
+| disabled_printing_until   | string  | ❌   | 인쇄 비활성화 종료일 (YYYY.MM.DD HH:mm:ss 형식) |
+| home_directory            | string  | ❌   | 홈 디렉토리                             |
+| balance                   | integer | ❌   | 잔액                                    |
+| privilege                 | string  | ❌   | 권한                                    |
+| sysadmin                  | string  | ❌   | 시스템 관리자 여부                      |
+| user_type                 | string  | ❌   | 사용자 타입                             |
+| user_status               | string  | ❌   | 사용자 상태                             |
+| terms_of_service          | string  | ❌   | 이용약관 동의 (Y/N)                     |
+| privacy_policy            | string  | ❌   | 개인정보처리방침 동의 (Y/N)             |
+| location_information      | string  | ❌   | 위치정보 동의 (Y/N)                     |
+| notification_email        | string  | ❌   | 이메일 알림 동의 (Y/N)                  |
+| user_role                 | string  | ❌   | 사용자 역할                             |
+| user_name                 | string  | ✅   | 수정 작업을 수행하는 사용자명           |
+| ip_address                | string  | ✅   | 요청자 IP 주소                          |
+
+### Example (Request)
+```json
+{
+  "user_id": "4c86fc3b-1316-43d3-97b5-b7d19733dad7",
+  "full_name": "김형준",
+  "department": "개발팀",
+  "office": "서울사무소",
+  "balance": 1000,
+  "user_name": "admin@company.com",
+  "ip_address": "127.0.0.1"
+}
+```
+
+---
+
+## Response
+
+### Success (200 OK)
+```json
+{
+  "ResultCode": "0",
+  "ErrorMessage": ""
+}
+```
+
+### Failure (401 Unauthorized)
+```json
+{
+  "ResultCode": "3",
+  "ErrorMessage": "undefined_foramt_reset_date"
+}
+```
+
+또는 기타 에러:
+```json
+{
+  "ResultCode": "1",
+  "ErrorMessage": "에러 메시지 상세"
+}
+```
+
+---
+
+## Notes
+- 날짜 필드는 `YYYY.MM.DD HH:mm:ss` 형식이어야 합니다.
+- 빈 문자열이나 null 값은 적절히 처리됩니다.
+- 수정 작업자는 `modified_by`와 `modified_date`가 자동으로 기록됩니다.
+- `user_id`, `user_name`, `email`, `password`는 변경할 수 없습니다.
+
+## Example (curl)
+```bash
+curl -X POST http://localhost:38005/api/users/modify \
+  -H "Content-Type: application/json" \
+  -H "session_token: <your_session_token>" \
+  -d '{
+    "user_id": "4c86fc3b-1316-43d3-97b5-b7d19733dad7",
+    "full_name": "김형준",
+    "department": "개발팀",
+    "user_name": "admin@company.com",
+    "ip_address": "127.0.0.1"
+  }'
+```
+
+
+# 7. 비밀번호 변경 API
+
+## 개요
+사용자의 비밀번호를 변경하는 API입니다.  
+기존 비밀번호 검증 후 새 비밀번호로 변경됩니다.
+
+---
+
+## Endpoint
+- **POST** `/api/users/change_pass`
+
+---
+
+## Request
+
+### Headers
+| Key             | Value                  | 필수 여부 | 설명             |
+|-----------------|------------------------|-----------|------------------|
+| Content-Type    | application/json        | ✅        | 요청 데이터 타입 |
+| session_token   | 발급받은 JWT 토큰 값    | ✅        | 로그인 시 발급된 토큰 |
+
+### Body Parameters
+| 필드명        | 타입   | 필수 | 설명                                    |
+|---------------|--------|------|-----------------------------------------|
+| user_id       | string | ✅   | 비밀번호를 변경할 사용자의 UUID         |
+| user_name     | string | ✅   | 비밀번호 변경 작업을 수행하는 사용자명  |
+| old_password  | string | ✅   | 기존 비밀번호                           |
+| new_password  | string | ✅   | 새 비밀번호                             |
+| ip_address    | string | ✅   | 요청자 IP 주소                          |
+
+### Example (Request)
+```json
+{
+  "user_id": "4c86fc3b-1316-43d3-97b5-b7d19733dad7",
+  "user_name": "admin@company.com",
+  "old_password": "oldpassword123",
+  "new_password": "newpassword456",
+  "ip_address": "127.0.0.1"
+}
+```
+
+---
+
+## Response
+
+### Success (200 OK)
+```json
+{
+  "ResultCode": "0",
+  "ErrorMessage": ""
+}
+```
+
+### Failure (401 Unauthorized)
+### 1. 새 비밀번호가 비어있는 경우
+```json
+{
+  "ResultCode": "2",
+  "ErrorMessage": "new_password_is_not_null"
+}
+```
+
+### 2. 기존 비밀번호가 일치하지 않는 경우
+```json
+{
+  "ResultCode": "3",
+  "ErrorMessage": "old_password_missmatch"
+}
+```
