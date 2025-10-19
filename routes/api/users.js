@@ -121,12 +121,11 @@ router.post('/login_vericode',localcheck, async(req, res) => {
       }       
 
       // user_name 과 verification code 검증 
-      const users = await pool.query(`SELECT t1.user_name, 
+      const users = await pool.query(`SELECT t1.user_name, t2.auth_type,
                                                       t1.password 
                                                 FROM tbl_user_info t1, tbl_auth_info t2
                                                 WHERE t1.user_name = $1 
                                                 and t1.user_id = t2.reference_id
-                                                and t2.auth_type = 'USER_SIGN_UP'
                                                 and t2.verification_code = $2
                                                 and t2.expired_date > now() 
                                                 and user_status in ('NEED_AUTH','PASSWORD_CHANGING' )
@@ -149,7 +148,7 @@ router.post('/login_vericode',localcheck, async(req, res) => {
                                                 and user_status in ('NEED_AUTH','PASSWORD_CHANGING')`, [user_name]);
 
         const token = jwt.sign({ user_name }, process.env.JWT_SECRET, { expiresIn: '8hr' });
-        res.json({ ResultCode: '0', ErrorMessage: '', token: token });
+        res.json({ ResultCode: '0', ErrorMessage: '', token: token , auth_type:users.rows[0].auth_type});
       } else {
         throw new Error('Invalid userName or password');
       }
@@ -282,7 +281,7 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
 
       const create_auth = await transaction.query(`insert into tbl_auth_info(
         reference_id,auth_type, verification_code, expired_date, created_date )
-        values($1, 'USER_SIGN_UP',$2, now() + interval '3 hours', now() )   
+        values($1, 'USER_TEMP_PASS',$2, now() + interval '3 hours', now() )   
       `, [v_user_id,v_verifiction_code]);
 
       is_exist_user = true;
@@ -374,12 +373,14 @@ router.post('/getuserinfo',localcheck, authMiddleware, async(req, res) => {
 
       const verifiction_code_seq = await transaction.query(`select generate_6_verification_code() verifiction_code`, []);
         // 인증 코드 생성 
-        v_verifiction_code = verifiction_code_seq.rows[0].verifiction_code;
+      v_verifiction_code = verifiction_code_seq.rows[0].verifiction_code;
+
+      const v_auth_type = temp_password === '' ? 'USER_TEMP_PASS' : 'USER_SIGN_UP';
 
       const create_auth = await transaction.query(`insert into tbl_auth_info(
           reference_id,auth_type, verification_code, expired_date, created_date )
-          values($1, 'USER_SIGN_UP',$2, now() + interval '3 hours', now() )   
-        `, [v_user_id,v_verifiction_code]);
+          values($1, $2, $3, now() + interval '3 hours', now() )   
+        `, [v_user_id,v_auth_type, v_verifiction_code]);
        
     }
   const x_verification_code = v_verifiction_code;
@@ -878,7 +879,7 @@ router.post('/forgot_pass',localcheck, async(req, res) => {
 
       const create_auth = await pool.query(`insert into tbl_auth_info(
         reference_id,auth_type, verification_code, expired_date, created_date )
-        values($1, 'USER_SIGN_UP',$2, now() + interval '3 hours', now() )   
+        values($1, 'USER_TEMP_PASS',$2, now() + interval '3 hours', now() )   
       `, [v_user_id,v_verifiction_code]);
 
       if (v_user_type === 'COMPANY' ) {

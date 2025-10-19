@@ -11,6 +11,7 @@
 | 2025-10-03   | zagan kim | 사용자 목록 조회 API |
 | 2025-10-18   | zagan kim | 사용자 정보 수정 API, 비밀번호 변경 API 추가 |
 | 2025-10-19   | zagan kim | 비밀번호 분실 API 추가 |
+| 2025-10-19   | zagan kim | 로그인 (Verification Code 인증) API에 auth_type추가 |
 
 ## 목차
 1. [로그인 API](#1-로그인-api)
@@ -363,12 +364,13 @@ tbl_user_info_pkey 는 email 입니다.
 
 ## Response
 
-### 성공 (200 OK)
+### 성공 (200 OK) 
 ```json
 {
   "ResultCode": "0",
   "ErrorMessage": "",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." 
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." ,
+  "auth_type": "USER_TEMP_PASS"
 }
 ```
 - `token`: JWT 인증 토큰 (유효기간 8시간)
@@ -398,6 +400,7 @@ tbl_user_info_pkey 는 email 입니다.
 - 인증코드(`verification_code`)는 회원가입 시 이메일로 전달된 값을 사용합니다.
 - 성공 시 `tbl_user_info.user_status`가 `COMPLETE_AUTH`로 변경됩니다.
 - JWT 토큰은 **8시간** 동안 유효합니다.
+- auth_type:은 회원가입시 비밀번호를 입력했으면 , USER_SIGN_UP, 그렇지 않으면, USER_TEMP_PASS, 또한 비밀번호 초기화시에도 USER_TEMP_PASS 로 리턴합니다.
 
    
 # 5. 사용자 목록 조회 API
