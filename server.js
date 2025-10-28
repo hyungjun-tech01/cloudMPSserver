@@ -8,6 +8,7 @@ const port = 38005;
 const usersRouter = require('./routes/api/users');
 const clientsRouter = require('./routes/api/clients');
 const companiesRouter = require('./routes/api/companies');
+const devicesRouter = require('./routes/api/devices');
 
 // Express가 JSON 형식의 요청 본문을 파싱하도록 설정합니다.
 app.use(express.json());
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use('/api/users', usersRouter);       // users 로 시작하는 요청은 usersRouter가 처리
 app.use('/api/clients', clientsRouter);       // clients 로 시작하는 요청은 clientsRouter 처리
 app.use('/api/companies', companiesRouter);       // companies 로 시작하는 요청은 companiesRouter 처리
+app.use('/api/devices', devicesRouter);       // companies 로 시작하는 요청은 companiesRouter 처리
 
 
 app.listen(port, () => {

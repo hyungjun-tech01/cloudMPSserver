@@ -139,3 +139,28 @@ application_engineer                 varchar(50)    ,
 region                               varchar(50)    ,
 status								 varchar(50) 	    
  );
+
+--2025.10.22
+drop table if exists tbl_client_device_info;
+
+create table tbl_client_device_info(
+device_id      varchar(36),
+client_id      varchar(36),
+company_code   integer,
+created_date   timestamp,
+created_by     varchar(36),
+modified_date  timestamp,
+modified_by    varchar(36)
+ );
+
+--2025.10.28 
+alter table tbl_device_info drop column column32;
+alter table tbl_device_info drop column column33;
+alter table tbl_device_info drop column column34;
+alter table tbl_device_info drop column column35;
+
+
+alter table tbl_device_info add black_drum_percentage  int4;
+alter table tbl_device_info add cyan_drum_percentage   int4; 
+alter table tbl_device_info add magenta_drum_percentage int4;
+alter table tbl_device_info add yellow_drum_percentage int4;
