@@ -8,6 +8,7 @@
 ## 목차
 1. [디바이스 등록 API](#1-디바이스-등록-api)
 2. [디바이스 목록 조회 API](#2-디바이스-목록-조회-api)
+3. [디바이스 수정 API](#3-디바이스-수정-api)
 
 ---
 
@@ -308,3 +309,133 @@ curl -X POST http://localhost:38005/api/devices/getdevicelist \
 - 페이징은 `getSafePagination` 유틸리티를 사용하여 안전하게 처리됩니다
 - 모든 요청은 `user_name`, `ip_address` 기준으로 로깅됩니다
 - 트랜잭션을 사용하여 데이터 일관성을 보장합니다
+
+# 3. 디바이스 수정 API
+
+## 개요
+등록된 디바이스의 정보를 수정하는 API입니다.
+디바이스 정보와 클라이언트 연결 정보를 함께 수정할 수 있습니다.
+
+---
+
+## Endpoint
+- **POST** `/api/devices/modify`
+
+---
+
+## Request
+
+### Headers
+| 키 | 필수 | 설명 |
+|----|------|------|
+| Content-Type | Y | `application/json` |
+| session_token | Y | 로그인 시 발급된 JWT 토큰 |
+
+### Body
+```json
+{
+    "device_id": "a5eaccd8-0837-4be5-8e6f-787fd4f5354d",
+    "device_name" : "복사기03333",
+    "ext_device_function" : "",
+    "physical_device_id" : "10.1.1.100",
+    "location" : "사무실03",
+    "device_model" : "MFP2000",
+    "serial_number" : "222-3333",
+    "device_status" : "대기",
+    "device_type" : "ALL",
+    "black_toner_percentage" : "",
+    "cyan_toner_percentage" : "",
+    "magenta_toner_percentage" : "",
+    "yellow_toner_percentage" : "",
+    "app_type" : "",
+    "black_drum_percentage" : "",
+    "cyan_drum_percentage" : "",
+    "magenta_drum_percentage" : "",
+    "yellow_drum_percentage" : "",
+    "client_id" : "dc823299-bdd4-4196-8cc3-1e2aea124299",
+    "user_name" : "whmoon000@naver.com",
+    "company_code" : "100014",
+    "ip_address" : "111.111.1.10"
+}
+```
+
+| 필드명 | 타입 | 필수 | 설명 |
+|--------|------|------|------|
+| device_id | string | Y | 수정할 디바이스 ID (UUID) |
+| device_name | string | Y | 디바이스 이름 |
+| ext_device_function | string | N | 외부 디바이스 기능 |
+| physical_device_id | string | N | 물리적 디바이스 ID (IP 주소 등) |
+| location | string | N | 디바이스 위치 |
+| device_model | string | N | 디바이스 모델명 |
+| serial_number | string | N | 시리얼 번호 |
+| device_status | string | N | 디바이스 상태 |
+| device_type | string | N | 디바이스 타입 |
+| black_toner_percentage | integer | N | 검정 토너 잔량 (0-100) |
+| cyan_toner_percentage | integer | N | 시안 토너 잔량 (0-100) |
+| magenta_toner_percentage | integer | N | 마젠타 토너 잔량 (0-100) |
+| yellow_toner_percentage | integer | N | 옐로우 토너 잔량 (0-100) |
+| app_type | string | N | 애플리케이션 타입 |
+| black_drum_percentage | integer | N | 검정 드럼 잔량 (0-100) |
+| cyan_drum_percentage | integer | N | 시안 드럼 잔량 (0-100) |
+| magenta_drum_percentage | integer | N | 마젠타 드럼 잔량 (0-100) |
+| yellow_drum_percentage | integer | N | 옐로우 드럼 잔량 (0-100) |
+| client_id | strin
+
+---
+
+## Response
+
+### ✅ 성공 (200 OK)
+```json
+{
+  "ResultCode": "0",
+  "ErrorMessage": ""
+}
+```
+
+### ❌ 실패 (401 Unauthorized)
+(에러 케이스는 /create와 동일)
+
+---
+
+## Process Flow
+1. `localcheck` 미들웨어로 로컬 접속 검증
+2. `authMiddleware`로 JWT 토큰 검증
+3. 토너/드럼 잔량 값 검증 (0-100 범위, 숫자 형식)
+4. 사용자 ID 조회 (`user_name`으로 `user_id` 조회)
+5. 트랜잭션 시작
+6. `tbl_client_device_info`에서 클라이언트 연결 정보 업데이트
+7. `tbl_device_info`에서 디바이스 정보 업데이트
+8. 트랜잭션 커밋
+9. 성공 응답 반환
+
+---
+
+## Example (curl)
+```
+curl -X POST http://localhost:38005/api/devices/modify \
+  -H "Content-Type: application/json" \
+  -H "session_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "device_id": "a5eaccd8-0837-4be5-8e6f-787fd4f5354d",
+    "device_name": "회의실 프린터 수정",
+    "physical_device_id": "192.168.1.100",
+    "location": "3층 회의실",
+    "device_model": "Sindoh A4-2020",
+    "serial_number": "SN123456789",
+    "device_status": "ACTIVE",
+    "device_type": "MULTIFUNCTION",
+    "black_toner_percentage": 85,
+    "cyan_toner_percentage": 92,
+    "magenta_toner_percentage": 78,
+    "yellow_toner_percentage": 88,
+    "black_drum_percentage": 45,
+    "cyan_drum_percentage": 52,
+    "magenta_drum_percentage": 38,
+    "yellow_drum_percentage": 48,
+    "client_id": "dc823299-bdd4-4196-8cc3-1e2aea124299",
+    "user_name": "whmoon000@naver.com",
+    "company_code": "100014",
+    "ip_address": "111.111.1.10"
+  }'
+```
