@@ -82,7 +82,7 @@ router.post('/login',localcheck, async(req, res) => {
          const passwordMatch = await bcrypt.compare(password, hashedPassword);
   
         if (passwordMatch) {
-          const token = jwt.sign({ user_name }, process.env.JWT_SECRET, { expiresIn: '8hr' });
+          const token = jwt.sign({ user_name }, process.env.JWT_SECRET, { expiresIn: '24hr' });
           res.json({ ResultCode: '0', ErrorMessage: '', token: token });
         } else {
           throw new Error('Invalid userName or password');
