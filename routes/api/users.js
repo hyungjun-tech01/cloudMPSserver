@@ -73,7 +73,10 @@ router.post('/login',localcheck, async(req, res) => {
         res.end();                  
       }else{
         const users = await pool.query(`SELECT user_name, password FROM tbl_user_info 
-                                         WHERE user_name = $1 and user_status='COMPLETE_AUTH' and user_type = 'PERSON'`, [user_name]);
+                                         WHERE user_name = $1 
+                                         and user_status='COMPLETE_AUTH' 
+                                         and user_type = 'PERSON' 
+                                         and deleted = 'N'`, [user_name]);
         if(!users.rows.length) 
            throw new Error('Invalid userName or password');
   
