@@ -158,7 +158,7 @@ router.post('/modify',localcheck, authMiddleware, async(req, res) => {
   //username 과 ip_address로 logging
 
   try{
-    const dateRegex = /^\d{4}\.\d{2}\.\d{2}$/;
+    const dateRegex = /^\d{4}\-\d{2}\-\d{2}$/;
     let establishment_date_input = establishment_date;
     let closure_date_input = closure_date;
     let contract_expiraton_date_input = contract_expiraton_date;

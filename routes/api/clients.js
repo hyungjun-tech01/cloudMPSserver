@@ -43,7 +43,7 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
 
     try{
 
-      const dateRegex = /^\d{4}\.\d{2}\.\d{2}$/;
+      const dateRegex = /^\d{4}\-\d{2}\-\d{2}$/;
       let establishment_date_input = establishment_date;
       let closure_date_input = closure_date;
 
@@ -51,7 +51,7 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
         establishment_date_input = null; 
       } else {
         if (!dateRegex.test(establishment_date_input)) {
-          throw new Error('establishment_date : 날짜는 YYYY.MM.DD 형식이어야 합니다.');
+          throw new Error('establishment_date : 날짜는 YYYY-MM-DD 형식이어야 합니다.');
         }
       }
 
@@ -59,7 +59,7 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
         closure_date_input = null; 
       } else {
         if (!dateRegex.test(closure_date_input)) {
-          throw new Error('closure_date: 날짜는 YYYY.MM.DD 형식이어야 합니다.');
+          throw new Error('closure_date: 날짜는 YYYY-MM-DD 형식이어야 합니다.');
         }
       }
 
@@ -145,7 +145,7 @@ router.post('/modify',localcheck, authMiddleware, async(req, res) => {
 
     try{
 
-      const dateRegex = /^\d{4}\.\d{2}\.\d{2}$/;
+      const dateRegex = /^\d{4}\-\d{2}\-\d{2}$/;
       let establishment_date_input = establishment_date;
       let closure_date_input = closure_date;
 
@@ -153,7 +153,7 @@ router.post('/modify',localcheck, authMiddleware, async(req, res) => {
         establishment_date_input = null; 
       } else {
         if (!dateRegex.test(establishment_date_input)) {
-          throw new Error('establishment_date : 날짜는 YYYY.MM.DD 형식이어야 합니다.');
+          throw new Error('establishment_date : 날짜는 YYYY-MM-DD 형식이어야 합니다.');
         }
       }
 
@@ -161,7 +161,7 @@ router.post('/modify',localcheck, authMiddleware, async(req, res) => {
         closure_date_input = null; 
       } else {
         if (!dateRegex.test(closure_date_input)) {
-          throw new Error('closure_date: 날짜는 YYYY.MM.DD 형식이어야 합니다.');
+          throw new Error('closure_date: 날짜는 YYYY-MM-DD 형식이어야 합니다.');
         }
       }
 

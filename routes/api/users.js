@@ -614,7 +614,7 @@ router.post('/modify',localcheck, authMiddleware, async(req, res) => {
 
     try{
 
-      const dateRegex = /^\d{4}\.\d{2}\.\d{2}\s\d{2}:\d{2}:\d{2}$/; 
+      const dateRegex = /^\d{4}\-\d{2}\-\d{2}\s\d{2}:\d{2}:\d{2}$/; 
       let reset_date_input = reset_date;
       let schedule_start_input = schedule_start;
       let total_jobs_input = total_jobs;
