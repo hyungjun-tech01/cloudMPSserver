@@ -164,3 +164,28 @@ alter table tbl_device_info add black_drum_percentage  int4;
 alter table tbl_device_info add cyan_drum_percentage   int4; 
 alter table tbl_device_info add magenta_drum_percentage int4;
 alter table tbl_device_info add yellow_drum_percentage int4;
+
+
+--2025.11.05
+drop table if  exists tbl_device_count_info;
+create table tbl_device_count_info (
+device_count_id         varchar(36) primary key default  uuid_generate_v4(),
+device_id               varchar(36),
+device_model            varchar(100),
+serial_number           varchar(100),
+status                  varchar(100),
+black_toner             int4,
+cyan_toner              int4,
+magenta_toner           int4,
+yellow_toner            int4,
+black_drum              int4,
+cyan_drum               int4,
+magenta_drum            int4,
+yellow_drum             int4,
+a3_black_pages          int4,
+a3_color_pages          int4,
+a4_black_pages          int4,
+a4_color_pages          int4,
+created_date            timestamp,
+created_by              varchar(36)
+);

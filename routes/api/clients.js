@@ -92,7 +92,7 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
             $27, $28,       $29)`,
       [v_client_id, company_code,             
         client_group, client_scale, deal_type, client_name, client_name_en,                 
-        business_registration_code, establishment_date, closure_date,                   
+        business_registration_code, establishment_date_input, closure_date_input,                   
         ceo_name, business_type, business_item, industry_type, client_zip_code,                
         client_address, client_phone_number, client_fax_number, homepage,                       
         client_memo, v_user_id,  v_user_id,
