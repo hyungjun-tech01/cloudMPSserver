@@ -1,14 +1,16 @@
 # Client API 문서
 
 ## 수정 이력
-| 수정일     | 작성자     | 내용       |
-|------------|-----------|------------|
-| 2025-10-04 | zagan kim | 최초 작성  |
+| 수정일       | 작성자     | 내용 |
+|--------------|-----------|------|
+| 2025-10-04   | zagan kim | 최초 작성 |
+| 2025-11-07   | zagan kim | getclientinfo 추가  |
 
 ## 목차
-1. [클라이언트 등록 API](#1-클라이언트-등록-API)
-2. [클라이언트 정보 수정 API](#3-클라이언트-정보-수정-API)
-3. [내 회사 클라이언트 정보 조회 API](#3-내-회사-클라이언트-정보-조회-API)
+1. [클라이언트 등록 API](#1-클라이언트-등록-api)
+2. [클라이언트 정보 수정 API](#2-클라이언트-정보-수정-api)
+3. [클라이언트 목록 조회 API](#3-클라이언트-목록-조회-api)
+4. [클라이언트 정보 조회 API](#4-클라이언트-정보-조회-api)
 
 ---
 
@@ -161,7 +163,7 @@
 ```
 
 ------------------------------------------------------------------------
-# 3. 내 회사 클라이언트 정보 조회 API
+# 3. 내 회사 클라이언트 목록 조회 API
 
 **Endpoint**: `POST /api/clients/getclientlist`
 
@@ -202,6 +204,46 @@
 }
 ```
 
+### Fail (401)
+```json
+{
+  "ResultCode": "1",
+  "ErrorMessage": "에러 메시지"
+}
+```
+------------------------------------------------------------------------
+# 4. 클라이언트 정보 조회 API
+
+**Endpoint**: `POST /api/clients/getclientinfo`
+
+## Request
+
+### Headers
+- Content-Type: application/json
+- session_token: {사용자 세션 토큰}
+
+### Body (JSON)
+```json
+{
+    "client_id": "87e8a689-94d9-420c-a685-8bcc71a1f87f",
+    "user_name": "hyungseong@naver.com",  // 클라이언트 조회하는 사용자 
+    "company_code": "100008",   // 클라이언트를 조회할 company 
+    "ip_address": "127.0.0.1"
+}
+```
+
+## Response
+
+### Success (200 OK)
+```json
+{
+  "ResultCode": "0",
+  "ErrorMessage": "",
+  "clients": {
+    // 클라이언트 상세 정보
+  }
+}
+```
 ### Fail (401)
 ```json
 {

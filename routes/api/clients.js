@@ -231,7 +231,7 @@ router.post('/modify',localcheck, authMiddleware, async(req, res) => {
 });
 
 
-  // 내 회사 클라이언트들  정보 조회
+ // 내 회사 클라이언트들  정보 조회
 router.post('/getclientlist',localcheck, authMiddleware, async(req, res) => {
 
     const {search_client_name, 
@@ -294,6 +294,34 @@ router.post('/getclientlist',localcheck, authMiddleware, async(req, res) => {
     }
   
   });
+
+  // 내 회사 클라이언트들  정보 조회
+router.post('/getclientinfo',localcheck, authMiddleware, async(req, res) => {
+
+  const {client_id, 
+          user_name, 
+          company_code, ip_address} = req.body;
+  try{
+
+      const clientResults = await pool.query(`SELECT *
+          FROM tbl_client_info 
+          WHERE client_id = $1`, 
+          [client_id]);
+
+      let clients = clientResults.rows[0];
+
+    res.json({ ResultCode: '0', ErrorMessage: '',  clients: clients });
+    res.end();
+
+  }catch(err){
+      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/getclientinfo'] reqBody Error:`, client_id );
+      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/getclientinfo '] Error:`, err.message); 
+
+      res.status(401).json({ ResultCode: '1', ErrorMessage: err.message });
+      res.end();
+  }
+
+});
 
   // 모듈로 내보내기
 module.exports = router;
