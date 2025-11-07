@@ -4,11 +4,13 @@
 | 수정일       | 작성자     | 내용 |
 |--------------|-----------|------|
 | 2025-01-15   | zagan kim | Device API 최초 작성 |
+| 2025-11-07   | zagan kim | 디바이스 정보 조회 api 추가 |
 
 ## 목차
 1. [디바이스 등록 API](#1-디바이스-등록-api)
 2. [디바이스 목록 조회 API](#2-디바이스-목록-조회-api)
 3. [디바이스 수정 API](#3-디바이스-수정-api)
+4. [디바이스 정보 조회 API](#4-디바이스-정보-조회-api)
 
 ---
 
@@ -439,3 +441,113 @@ curl -X POST http://localhost:38005/api/devices/modify \
     "ip_address": "111.111.1.10"
   }'
 ```
+# 4. 디바이스 정보 조회 API
+
+## 개요
+특정 디바이스의 상세 정보를 조회하는 API입니다.  
+`device_id`를 기준으로 단일 디바이스 정보를 반환하며,  
+클라이언트 정보도 함께 조회됩니다.
+
+---
+
+## Endpoint
+- **POST** `/api/devices/getdeviceinfo`
+
+---
+
+## Request
+
+### Headers
+| 키 | 필수 | 설명 |
+|----|------|------|
+| Content-Type | Y | `application/json` |
+| session_token | Y | 로그인 시 발급된 JWT 토큰 |
+
+### Body
+```json
+{
+  "device_id": "a5eaccd8-0837-4be5-8e6f-787fd4f5354d",
+  "user_name": "admin@company.com",
+  "company_code": "100008",
+  "ip_address": "192.168.0.1"
+}
+```
+
+| 필드명 | 타입 | 필수 | 설명 |
+|--------|------|------|------|
+| device_id | string | Y | 조회할 디바이스 ID (UUID) |
+| user_name | string | Y | 요청 사용자명 |
+| company_code | string | Y | 회사 코드 |
+| ip_address | string | Y | 요청자 IP 주소 |
+
+---
+
+## Response
+
+### ✅ 성공 (200 OK)
+```json
+{
+  "ResultCode": "0",
+  "ErrorMessage": "",
+  "devices": {
+    "device_id": "a5eaccd8-0837-4be5-8e6f-787fd4f5354d",
+    "device_name": "회의실 프린터",
+    "created_date": "2025-01-15T09:00:00.000Z",
+    "created_by": "uuid-user-id",
+    "modified_date": "2025-01-15T09:00:00.000Z",
+    "modified_by": "uuid-user-id",
+    "ext_device_function": "PRINT_SCAN_COPY",
+    "physical_device_id": "192.168.1.100",
+    "location": "3층 회의실",
+    "device_model": "Sindoh A4-2020",
+    "serial_number": "SN123456789",
+    "device_status": "ACTIVE",
+    "device_type": "MULTIFUNCTION",
+    "black_toner_percentage": 85,
+    "cyan_toner_percentage": 92,
+    "magenta_toner_percentage": 78,
+    "yellow_toner_percentage": 88,
+    "app_type": "CLOUD_MPS",
+    "black_drum_percentage": 45,
+    "cyan_drum_percentage": 52,
+    "magenta_drum_percentage": 38,
+    "yellow_drum_percentage": 48,
+    "client_name": "스몰컴퍼니"
+  }
+}
+```
+
+### ❌ 실패 (401 Unauthorized)
+```json
+{
+  "ResultCode": "1",
+  "ErrorMessage": "에러 메시지 상세"
+}
+```
+
+---
+## Process Flow
+1. `localcheck` 미들웨어로 로컬 접속 검증
+2. `authMiddleware`로 JWT 토큰 검증
+3. `tbl_device_info`, `tbl_client_device_info`, `tbl_client_info` 조인하여 조회
+4. `device_id`로 디바이스 정보 조회
+5. 조회된 디바이스 정보 반환
+
+---
+
+## Example (curl)ash
+curl -X POST http://localhost:38005/api/devices/getdeviceinfo \
+  -H "Content-Type: application/json" \
+  -H "session_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "device_id": "a5eaccd8-0837-4be5-8e6f-787fd4f5354d",
+    "user_name": "admin@company.com",
+    "company_code": "100008",
+    "ip_address": "192.168.0.1"
+  }'---
+
+## Notes
+- `device_id`는 UUID 형식이어야 합니다
+- 조회 결과는 단일 객체로 반환됩니다 (배열이 아님)
+- 클라이언트 정보(`client_name`)도 함께 조회됩니다
+- 모든 요청은 `user_name`, `ip_address` 기준으로 로깅됩니다

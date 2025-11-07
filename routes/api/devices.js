@@ -247,8 +247,8 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
       res.end();
   
     }catch(err){
-        console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/getuserinfo'] reqBody Error:`, user_name );
-        console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/getuserinfo '] Error:`, err.message); 
+        console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/getdevicelist'] reqBody Error:`, user_name );
+        console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/getdevicelist '] Error:`, err.message); 
   
         res.status(401).json({ ResultCode: '1', ErrorMessage: err.message });
         res.end();
@@ -370,6 +370,59 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
       }
     }
   });
+
+// device 하나 조회 device_id로 
+router.post('/getdeviceinfo',localcheck, authMiddleware, async(req, res) => {
+
+  const {device_id,
+          user_name, 
+          company_code, ip_address} = req.body;
+
+ 
+  try{
+      const results = await pool.query(`SELECT tdi.device_id
+              ,tdi.device_name
+              ,tdi.created_date
+              ,tdi.created_by
+              ,tdi.modified_date
+              ,tdi.modified_by
+              ,tdi.ext_device_function
+              ,tdi.physical_device_id
+              ,tdi.location
+              ,tdi.device_model
+              ,tdi.serial_number
+              ,tdi.device_status
+              ,tdi.device_type
+              ,tdi.black_toner_percentage
+              ,tdi.cyan_toner_percentage
+              ,tdi.magenta_toner_percentage
+              ,tdi.yellow_toner_percentage
+              ,tdi.app_type
+              ,tdi.black_drum_percentage
+              ,tdi.cyan_drum_percentage
+              ,tdi.magenta_drum_percentage
+              ,tdi.yellow_drum_percentage
+              ,tci.client_name
+          FROM tbl_device_info tdi
+          JOIN tbl_client_device_info tcdi ON tdi.device_id = tcdi.device_id
+          LEFT JOIN tbl_client_info tci ON tcdi.client_id = tci.client_id
+          WHERE tdi.device_id = $1`, 
+          [device_id]);
+
+      let devices = results.rows[0];
+
+    res.json({ ResultCode: '0', ErrorMessage: '', devices: devices });
+    res.end();
+
+  }catch(err){
+      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/getdeviceinfo'] reqBody Error:`, device_id );
+      console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/getdeviceinfo '] Error:`, err.message); 
+
+      res.status(401).json({ ResultCode: '1', ErrorMessage: err.message });
+      res.end();
+  }
+
+});
 
   // 모듈로 내보내기
   module.exports = router;
