@@ -191,5 +191,8 @@ created_date            timestamp,
 created_by              varchar(36)
 );
 
---2025.11.08 
+--2025.11.08 : tbl_client_device_info에 user_id 추가 : 개인회원도 기기등록 가능 
 alter table tbl_client_device_info add user_id varchar(36);
+
+--2025.11.08 : tbl_auth_info.verification_code  컬럼을 varchar(256) 으로 변경 : 영구발행 토큰도 관리 
+alter table tbl_auth_info ALTER column verification_code TYPE varchar(256);
