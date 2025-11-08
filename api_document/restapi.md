@@ -397,30 +397,6 @@ JWT 토큰은 생성되지만 응답에는 포함되지 않습니다.
 
 ---
 
-## Example (curl)
-```bash
-curl -X POST http://localhost:38005/api/restapi/DeviceStatusUpdate \
-  -H "Content-Type: application/json" \
-  -H "remote_client_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
-  -d '{
-    "Model": "Sindoh A4-2020",
-    "SerialNo": "SN123456789",
-    "Status": "ACTIVE",
-    "BlackToner": 85,
-    "CyanToner": 92,
-    "MagentaToner": 78,
-    "YellowToner": 88,
-    "BlackDrum": 45,
-    "CyanDrum": 52,
-    "MagentaDrum": 38,
-    "YellowDrum": 48,
-    "A3BlackPages": 1000,
-    "A3ColorPages": 500,
-    "A4BlackPages": 5000,
-    "A4ColorPages": 2000
-  }'
-```
-
 ---
 
 ## Notes
