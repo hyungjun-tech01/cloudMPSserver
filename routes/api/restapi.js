@@ -100,6 +100,11 @@ router.post('/MFPIDPWDLogin',localcheck, async(req, res) => {
             throw error;
         }
 
+        // 만약 데이터가 device 에 없으면 데이터 생성 , 
+        // 개인회원이면, user_id 를 client_device_info에 입력 
+        // 기업회원이면, company_code를 client_device_info에 입력
+        // 파트너이면 company_code를 client_device_info에
+
         //device id 확인 , model과  serial number로 
         const device = await pool.query(`SELECT device_id
                                          FROM tbl_device_info 

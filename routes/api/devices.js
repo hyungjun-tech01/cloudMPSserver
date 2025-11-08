@@ -82,18 +82,31 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
     const v_magenta_drum_percentage = validateAndToNull(magenta_drum_percentage, 'magenta_drum_percentage');
     const v_yellow_drum_percentage = validateAndToNull(yellow_drum_percentage, 'yellow_drum_percentage');
 
-      const user_id = await transaction.query(`select user_id
-        from tbl_user_info tbi
-        where tbi.user_name = $1`,[user_name]);
+    const user_id = await transaction.query(`select user_id, user_type
+      from tbl_user_info tbi
+      where tbi.user_name = $1`,[user_name]);
 
-      const v_created_by = user_id.rows[0].user_id;
-       
-  
-      const device_id = await transaction.query(`select uuid_generate_v4() uuid`,[]);
+    const v_created_by = user_id.rows[0].user_id;
+    const v_userType = user_id.rows[0].user_type;
+      
 
-      const v_device_id  = device_id.rows[0].uuid;
+    const device_id = await transaction.query(`select uuid_generate_v4() uuid`,[]);
 
-      const createDevice = await transaction.query(`insert into tbl_device_info(
+    const v_device_id  = device_id.rows[0].uuid;
+
+    // 등록전에 모델 + 기번 유니크 체크        
+    const uniqueCheck = await transaction.query(`select 1 
+                                                  from tbl_device_info t
+                                                  where t.device_model = $1 
+                                                  and t.serial_number = $2`,[device_model, serial_number]);
+
+    if (uniqueCheck.rows.length > 0) {
+      const error = new Error(`model_sn_is_exists`);
+      error.statusCode = 400; // HTTP 상태 코드 지정
+      error.resultCode = '2'; // 사용자 정의 ResultCode 지정 (옵션)
+      throw error;
+    }                                               
+    const createDevice = await transaction.query(`insert into tbl_device_info(
           device_id             ,device_name          ,created_date
           ,created_by           ,modified_date        ,modified_by
           ,ext_device_function  ,physical_device_id   ,location
@@ -119,7 +132,10 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
           ,v_black_drum_percentage            ,v_cyan_drum_percentage       ,v_magenta_drum_percentage
           ,v_yellow_drum_percentage ]);
 
-   const createDeviceClient = await transaction.query(`insert into tbl_client_device_info(
+      // 개인사용자면, 개인 user_id 등록 
+      // 기업고객, 파트너 이면, company_code 등록, 파트너이면 추가로 client_id 등록 가능       
+    if( v_userType === 'COMPANY'){    
+      const createDeviceClient = await transaction.query(`insert into tbl_client_device_info(
             device_id       ,client_id      ,company_code
             ,created_date   ,created_by     ,modified_date
             ,modified_by)													
@@ -129,6 +145,18 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
       [v_device_id ,client_id  ,company_code        
         ,v_created_by
         ,v_created_by]);
+    }else if( v_userType === 'PERSON'){
+      const createDeviceClient = await transaction.query(`insert into tbl_client_device_info(
+        device_id       ,client_id      ,user_id
+        ,created_date   ,created_by     ,modified_date
+        ,modified_by)													
+      values($1, $2, $3,  
+        now(),        $4,      now(),    
+          $5)`,
+    [v_device_id ,client_id  ,v_created_by        
+      ,v_created_by
+      ,v_created_by]);
+    }
 
       await transaction.query('COMMIT');
       
@@ -187,64 +215,132 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
               
   
     try{
-        const count = await pool.query(`SELECT count(*)
-        FROM tbl_device_info tdi
-        JOIN tbl_client_device_info tcdi ON tdi.device_id = tcdi.device_id
-        LEFT JOIN tbl_client_info tci ON tcdi.client_id = tci.client_id
-        WHERE tcdi.company_code = $1
-        and tci.client_name ilike '%'||$2||'%'
-        and tdi.device_name ilike '%'||$3||'%'
-        and tdi.location ilike '%'||$4||'%'
-        and tdi.physical_device_id ilike '%'||$5||'%'
-        and tdi.device_model  ilike '%'||$6||'%'`, 
-        [company_code, searchClientName, 
-            searchDeviceName, searchDeviceLocation, 
-            searchDeviceIpAddress, searchDeviceModel]);
-       
-        const totalPages = Math.ceil(Number(count.rows[0].count) / itemsPerPage);        
 
-        const results = await pool.query(`SELECT tdi.device_id
-                ,tdi.device_name
-                ,tdi.created_date
-                ,tdi.created_by
-                ,tdi.modified_date
-                ,tdi.modified_by
-                ,tdi.ext_device_function
-                ,tdi.physical_device_id
-                ,tdi.location
-                ,tdi.device_model
-                ,tdi.serial_number
-                ,tdi.device_status
-                ,tdi.device_type
-                ,tdi.black_toner_percentage
-                ,tdi.cyan_toner_percentage
-                ,tdi.magenta_toner_percentage
-                ,tdi.yellow_toner_percentage
-                ,tdi.app_type
-                ,tdi.black_drum_percentage
-                ,tdi.cyan_drum_percentage
-                ,tdi.magenta_drum_percentage
-                ,tdi.yellow_drum_percentage
-                ,tci.client_name
-            FROM tbl_device_info tdi
-            JOIN tbl_client_device_info tcdi ON tdi.device_id = tcdi.device_id
-            LEFT JOIN tbl_client_info tci ON tcdi.client_id = tci.client_id
-            WHERE tcdi.company_code = $1
-            and tci.client_name ilike '%'||$2||'%'
-            and tdi.device_name ilike '%'||$3||'%'
-            and tdi.location ilike '%'||$4||'%'
-            and tdi.physical_device_id ilike '%'||$5||'%'
-            and tdi.device_model  ilike '%'||$6||'%'
-            limit $7 offset $8`, 
-            [company_code, searchClientName, 
-                searchDeviceName, searchDeviceLocation, 
-                searchDeviceIpAddress, searchDeviceModel,
-                 itemsPerPage, offset]);
-  
-        let devices = results.rows;
-  
-      res.json({ ResultCode: '0', ErrorMessage: '', totalPages:totalPages,  devices: devices });
-      res.end();
+        // 기업사용자나 파트너 사용자면 company code 로 조회 
+        // 개인 사용자는 자기 사용자로 조회 
+        // 쿼리시, 드럼사용량, 토너 사용량, 카언터는 device_count 테이블 조회할 것 .
+        const userType = await pool.query(`select user_type , user_id
+                                            from tbl_user_info t
+                                            where t.user_name = $1`,[user_name]);
+        const v_userType = userType.rows[0].user_type;
+        const v_user_id = userType.rows[0].user_id;
+        
+        if (v_userType === 'COMPANY') {
+          
+          const count = await pool.query(`SELECT count(*)
+          FROM tbl_device_info tdi
+          JOIN tbl_client_device_info tcdi ON tdi.device_id = tcdi.device_id
+          LEFT JOIN tbl_client_info tci ON tcdi.client_id = tci.client_id
+          WHERE tcdi.company_code = $1
+          and tci.client_name ilike '%'||$2||'%'
+          and tdi.device_name ilike '%'||$3||'%'
+          and tdi.location ilike '%'||$4||'%'
+          and tdi.physical_device_id ilike '%'||$5||'%'
+          and tdi.device_model  ilike '%'||$6||'%'`, 
+          [company_code, searchClientName, 
+              searchDeviceName, searchDeviceLocation, 
+              searchDeviceIpAddress, searchDeviceModel]);
+        
+          const totalPages = Math.ceil(Number(count.rows[0].count) / itemsPerPage);        
+
+          const results = await pool.query(`SELECT tdi.device_id
+                  ,tdi.device_name
+                  ,tdi.created_date
+                  ,tdi.created_by
+                  ,tdi.modified_date
+                  ,tdi.modified_by
+                  ,tdi.ext_device_function
+                  ,tdi.physical_device_id
+                  ,tdi.location
+                  ,tdi.device_model
+                  ,tdi.serial_number
+                  ,tdi.device_status
+                  ,tdi.device_type
+                  ,tdi.black_toner_percentage
+                  ,tdi.cyan_toner_percentage
+                  ,tdi.magenta_toner_percentage
+                  ,tdi.yellow_toner_percentage
+                  ,tdi.app_type
+                  ,tdi.black_drum_percentage
+                  ,tdi.cyan_drum_percentage
+                  ,tdi.magenta_drum_percentage
+                  ,tdi.yellow_drum_percentage
+                  ,tci.client_name
+              FROM tbl_device_info tdi
+              JOIN tbl_client_device_info tcdi ON tdi.device_id = tcdi.device_id
+              LEFT JOIN tbl_client_info tci ON tcdi.client_id = tci.client_id
+              WHERE tcdi.company_code = $1
+              and tci.client_name ilike '%'||$2||'%'
+              and tdi.device_name ilike '%'||$3||'%'
+              and tdi.location ilike '%'||$4||'%'
+              and tdi.physical_device_id ilike '%'||$5||'%'
+              and tdi.device_model  ilike '%'||$6||'%'
+              limit $7 offset $8`, 
+              [company_code, searchClientName, 
+                  searchDeviceName, searchDeviceLocation, 
+                  searchDeviceIpAddress, searchDeviceModel,
+                  itemsPerPage, offset]);
+    
+          let devices = results.rows;
+    
+          res.json({ ResultCode: '0', ErrorMessage: '', totalPages:totalPages,  devices: devices });
+          res.end();
+        } else if ( v_userType === 'PERSON'){
+          const count = await pool.query(`SELECT count(*)
+          FROM tbl_device_info tdi
+          JOIN tbl_client_device_info tcdi ON tdi.device_id = tcdi.device_id
+          WHERE tcdi.user_id = $1
+          and tdi.device_name ilike '%'||$2||'%'
+          and tdi.location ilike '%'||$3||'%'
+          and tdi.physical_device_id ilike '%'||$4||'%'
+          and tdi.device_model  ilike '%'||$5||'%'`, 
+          [v_user_id,  
+              searchDeviceName, searchDeviceLocation, 
+              searchDeviceIpAddress, searchDeviceModel]);
+        
+          const totalPages = Math.ceil(Number(count.rows[0].count) / itemsPerPage);        
+
+          const results = await pool.query(`SELECT tdi.device_id
+                  ,tdi.device_name
+                  ,tdi.created_date
+                  ,tdi.created_by
+                  ,tdi.modified_date
+                  ,tdi.modified_by
+                  ,tdi.ext_device_function
+                  ,tdi.physical_device_id
+                  ,tdi.location
+                  ,tdi.device_model
+                  ,tdi.serial_number
+                  ,tdi.device_status
+                  ,tdi.device_type
+                  ,tdi.black_toner_percentage
+                  ,tdi.cyan_toner_percentage
+                  ,tdi.magenta_toner_percentage
+                  ,tdi.yellow_toner_percentage
+                  ,tdi.app_type
+                  ,tdi.black_drum_percentage
+                  ,tdi.cyan_drum_percentage
+                  ,tdi.magenta_drum_percentage
+                  ,tdi.yellow_drum_percentage
+                  ,''  client_name
+              FROM tbl_device_info tdi
+              JOIN tbl_client_device_info tcdi ON tdi.device_id = tcdi.device_id
+              WHERE tcdi.user_id = $1
+              and tdi.device_name ilike '%'||$2||'%'
+              and tdi.location ilike '%'||$3||'%'
+              and tdi.physical_device_id ilike '%'||$4||'%'
+              and tdi.device_model  ilike '%'||$5||'%'
+              limit $6 offset $7`, 
+              [v_user_id,  
+                  searchDeviceName, searchDeviceLocation, 
+                  searchDeviceIpAddress, searchDeviceModel,
+                  itemsPerPage, offset]);
+    
+          let devices = results.rows;
+    
+          res.json({ ResultCode: '0', ErrorMessage: '', totalPages:totalPages,  devices: devices });
+          res.end();
+        }
   
     }catch(err){
         console.log(`[${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}] [API: 'api/users/getdevicelist'] reqBody Error:`, user_name );

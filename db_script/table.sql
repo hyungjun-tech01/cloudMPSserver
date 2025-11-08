@@ -147,6 +147,7 @@ create table tbl_client_device_info(
 device_id      varchar(36),
 client_id      varchar(36),
 company_code   integer,
+user_id        varchar(36),
 created_date   timestamp,
 created_by     varchar(36),
 modified_date  timestamp,
@@ -189,3 +190,6 @@ a4_color_pages          int4,
 created_date            timestamp,
 created_by              varchar(36)
 );
+
+--2025.11.08 
+alter table tbl_client_device_info add user_id varchar(36);

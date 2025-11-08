@@ -47,6 +47,9 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
       let establishment_date_input = establishment_date;
       let closure_date_input = closure_date;
 
+      if   (company_code === null || company_code === undefined || String(company_code).trim() === '') {
+        throw new Error('company_code_is_not_null');
+      }
       if (establishment_date_input === null || establishment_date_input === undefined || String(establishment_date_input).trim() === '') {
         establishment_date_input = null; 
       } else {
