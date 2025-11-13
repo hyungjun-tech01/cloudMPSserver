@@ -230,12 +230,13 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
           JOIN tbl_client_device_info tcdi ON tdi.device_id = tcdi.device_id
           LEFT JOIN tbl_client_info tci ON tcdi.client_id = tci.client_id
           WHERE tcdi.company_code = $1
-          and (tci.client_name is null or tci.client_name ilike '%'||$2||'%')
-          and tdi.device_name ilike '%'||$3||'%'
-          and tdi.location ilike '%'||$4||'%'
-          and tdi.physical_device_id ilike '%'||$5||'%'
-          and tdi.device_model  ilike '%'||$6||'%'`, 
-          [company_code, searchClientName, 
+          and ( (tci.client_name is null and $2 = '') or 
+            (  tci.client_name ilike '%'||$3||'%') )
+          and tdi.device_name ilike '%'||$4||'%'
+          and tdi.location ilike '%'||$5||'%'
+          and tdi.physical_device_id ilike '%'||$6||'%'
+          and tdi.device_model  ilike '%'||$7||'%'`, 
+          [company_code, searchClientName, searchClientName,
               searchDeviceName, searchDeviceLocation, 
               searchDeviceIpAddress, searchDeviceModel]);
         
@@ -268,13 +269,14 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
               JOIN tbl_client_device_info tcdi ON tdi.device_id = tcdi.device_id
               LEFT JOIN tbl_client_info tci ON tcdi.client_id = tci.client_id
               WHERE tcdi.company_code = $1
-              and (tci.client_name is null or tci.client_name ilike '%'||$2||'%')
-              and tdi.device_name ilike '%'||$3||'%'
-              and tdi.location ilike '%'||$4||'%'
-              and tdi.physical_device_id ilike '%'||$5||'%'
-              and tdi.device_model  ilike '%'||$6||'%'
-              limit $7 offset $8`, 
-              [company_code, searchClientName, 
+              and ( (tci.client_name is null and $2 = '') or 
+              (  tci.client_name ilike '%'||$3||'%') )
+              and tdi.device_name ilike '%'||$4||'%'
+              and tdi.location ilike '%'||$5||'%'
+              and tdi.physical_device_id ilike '%'||$6||'%'
+              and tdi.device_model  ilike '%'||$7||'%'
+              limit $8 offset $9`, 
+              [company_code, searchClientName, searchClientName,
                   searchDeviceName, searchDeviceLocation, 
                   searchDeviceIpAddress, searchDeviceModel,
                   itemsPerPage, offset]);

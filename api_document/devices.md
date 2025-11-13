@@ -199,7 +199,6 @@ curl -X POST http://localhost:38005/api/devices/create \
   "search_client_name": "스몰컴퍼니",
   "search_device_name": "회의실",
   "search_device_location": "3층",
-  "search_device_notes": "",
   "search_device_ip_address": "192.168.1",
   "search_device_model": "Sindoh",
   "items_per_page": 10,
@@ -215,7 +214,6 @@ curl -X POST http://localhost:38005/api/devices/create \
 | search_client_name | string | N | 클라이언트명 검색 (부분 검색) |
 | search_device_name | string | N | 디바이스명 검색 (부분 검색) |
 | search_device_location | string | N | 디바이스 위치 검색 (부분 검색) |
-| search_device_notes | string | N | 디바이스 메모 검색 (부분 검색) |
 | search_device_ip_address | string | N | 디바이스 IP 주소 검색 (부분 검색) |
 | search_device_model | string | N | 디바이스 모델 검색 (부분 검색) |
 | items_per_page | integer | N | 페이지당 아이템 수 (기본값: 10) |
