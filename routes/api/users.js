@@ -17,10 +17,14 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
   // 1. SMTP 서버 주소: outbound.daouoffice.com
   host: 'outbound.daouoffice.com', 
+  // host: 'smtp.gmail.com',  // 구글
   // 2. 포트 번호: SSL/TLS를 위한 465번 사용
   port: 465,
+  // port: 587, // **TLS**를 사용할 경우 (권장) 구글 
   // 3. 보안 설정: SSL/TLS 사용 (465 포트는 secure: true 필수)
   secure: true, 
+  // secure: false, // TLS/587 포트 사용 시  구글 
+  // requireTLS: true, // TLS 연결을 명시적으로 요구 구글
   // 4. 인증 정보: Daou Office 계정 정보
   auth: {
       // .env 파일 등에 저장된 발신자 이메일 주소
