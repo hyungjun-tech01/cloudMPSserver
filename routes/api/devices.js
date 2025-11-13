@@ -193,7 +193,6 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
     const {search_client_name, 
             search_device_name, 
             search_device_location, 
-            search_device_notes,
             search_device_ip_address,
             search_device_model,
             items_per_page, 
@@ -205,7 +204,6 @@ router.post('/create',localcheck, authMiddleware, async(req, res) => {
    const searchClientName = search_client_name ?? '';
    const searchDeviceName = search_device_name ?? '';
    const searchDeviceLocation = search_device_location ?? '';
-   const searchDeviceNotes = search_device_notes ?? '';
    const searchDeviceIpAddress = search_device_ip_address ?? '';
    const searchDeviceModel = search_device_model ?? '';
  
